@@ -1,0 +1,15 @@
+limits:
+  max_rounds: 64
+  max_bytes_per_message: 256
+  max_total_bytes: 3072
+
+systems:
+  certtalk:
+    max_path_attempts: 6
+    max_path_length: 64
+  sendall:
+    chunk_size: 32
+  greedyprobe:
+    max_probes: 12
+  cutgrow:
+    max_iterations: 12

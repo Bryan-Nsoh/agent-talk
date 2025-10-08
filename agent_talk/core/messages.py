@@ -1,0 +1,75 @@
+"""Typed message helpers."""
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from typing import Any, Dict, Literal, TypedDict
+
+from .crc16 import crc16_for_fields
+
+SchemaLiteral = Literal["v1"]
+
+
+class MessageError(ValueError):
+    """Raised for malformed messages."""
+
+
+def _canonical_payload_bytes(payload: Dict[str, Any]) -> bytes:
+    try:
+        return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise MessageError(f"payload not JSON-serialisable: {exc}") from exc
+
+
+@dataclass(slots=True)
+class Msg:
+    """Structured message with CRC validation."""
+
+    type: str
+    payload: Dict[str, Any]
+    schema: SchemaLiteral = "v1"
+    seq: int = 0
+    crc16: int = field(init=False)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.payload, dict):
+            raise MessageError("payload must be a dict")
+        if self.schema != "v1":
+            raise MessageError(f"unsupported schema {self.schema}")
+        if self.seq < 0:
+            raise MessageError("seq must be non-negative")
+        self.crc16 = self.compute_crc()
+
+    def compute_crc(self) -> int:
+        payload_bytes = _canonical_payload_bytes(self.payload)
+        return crc16_for_fields(self.type, payload_bytes)
+
+    def to_json(self) -> str:
+        out = {
+            "type": self.type,
+            "payload": self.payload,
+            "schema": self.schema,
+            "seq": self.seq,
+            "crc16": self.crc16,
+        }
+        return json.dumps(out, separators=(",", ":"), sort_keys=True)
+
+    @staticmethod
+    def from_json(data: str) -> "Msg":
+        try:
+            raw = json.loads(data)
+        except json.JSONDecodeError as exc:
+            raise MessageError(f"invalid JSON: {exc}") from exc
+        required = {"type", "payload", "schema", "seq", "crc16"}
+        if not required.issubset(raw):
+            missing = required - raw.keys()
+            raise MessageError(f"missing fields {missing}")
+        msg = Msg(type=raw["type"], payload=raw["payload"], schema=raw["schema"], seq=raw["seq"])
+        if msg.crc16 != raw["crc16"]:
+            raise MessageError("CRC16 mismatch")
+        return msg
+
+
+def make_message(msg_type: str, payload: Dict[str, Any], seq: int) -> Msg:
+    """Convenience wrapper to construct a validated message."""
+    return Msg(type=msg_type, payload=payload, seq=seq)

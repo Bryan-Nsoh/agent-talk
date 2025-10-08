@@ -1,0 +1,16 @@
+delta_off:
+  encoding:
+    cuts: "ABS16_v1"
+
+rle_off:
+  encoding:
+    paths: "ABS16_v1"
+
+cut_only:
+  forbid_path: true
+
+path_only:
+  forbid_cut: true
+
+grid16:
+  grid_size: 16

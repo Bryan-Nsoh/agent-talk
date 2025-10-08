@@ -1,0 +1,27 @@
+ [build-system]
+ requires = ["setuptools>=64", "wheel"]
+ build-backend = "setuptools.build_meta"
+
+ [project]
+ name = "agent-talk-beta"
+ version = "0.1.0"
+ description = "Beta: Proof-of-Path Agent Talk on private occupancy grids"
+ readme = "README.md"
+ requires-python = ">=3.11"
+ license = {text = "MIT"}
+ authors = [
+   {name = "Agent Talk Team"}
+ ]
+ dependencies = []
+
+[project.optional-dependencies]
+analysis = [
+  "numpy>=1.26",
+  "matplotlib>=3.8"
+]
+dev = [
+  "pytest>=8.0"
+]
+
+[tool.setuptools]
+packages = ["agent_talk"]
