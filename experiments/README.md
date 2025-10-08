@@ -21,23 +21,29 @@ All experiments follow the Agent Experiment Protocol in `agents.md`. Logs live i
 
 ```bash
 # Generate dataset cache
-uv run python -m agent_talk.env.generator --out data/20251008T000000Z_cache.jsonl --n 1000 --size 10 --seed 123
+uv run python -m agent_talk.env.generator --out data/20251008T151417Z_cache.jsonl --n 1000 --size 10 --seed 123
 
 # Evaluate all systems
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T000000Z_cache.jsonl --system certtalk --out runs/20251008T000000Z_certtalk.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T000000Z_cache.jsonl --system sendall --out runs/20251008T000000Z_sendall.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T000000Z_cache.jsonl --system greedyprobe --out runs/20251008T000000Z_greedyprobe.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T000000Z_cache.jsonl --system cutgrow --out runs/20251008T000000Z_cutgrow.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system certtalk --out runs/20251008T151417Z_certtalk.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system sendall --out runs/20251008T151417Z_sendall.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system greedyprobe --out runs/20251008T151417Z_greedyprobe.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system cutgrow --out runs/20251008T151417Z_cutgrow.jsonl
 
 # Summarise metrics
-uv run python -m agent_talk.analysis.metrics --inputs runs/20251008T000000Z_*.jsonl --out runs/20251008T000000Z_summary.csv
+uv run python -m agent_talk.analysis.metrics --inputs runs/20251008T151417Z_*.jsonl --out runs/20251008T151417Z_summary.csv
 ```
 
 ### Live Observations
-- _Pending run._
+- 15:14 UTC: Initial `cutgrow` batch evaluation hit the 10s CLI timeout; relaunched under `nohup` and completed without stdout output (log file remains empty).
+- Runs completed without protocol exceptions; dataset generation produced exactly 1000 instances.
 
 ### Results Summary
-- _Pending run._
-- Follow-up: _TBD._
+- Key metrics (test split = all, 1000 instances):
+  - CertTalk — success 0.23, bytes median 3128, rounds median 21, path gap 0, interpretability 0.23.
+  - Send-All — success 1.00, bytes median 516, rounds median 4, path gap 0, interpretability 1.00.
+  - Greedy-Probe — success 0.24, bytes median 3126, rounds median 20, path gap 0, interpretability 0.24.
+  - Cut-Grow — success 0.00, bytes median 3139, rounds median 22, interpretability 0.00.
+- Hypothesis outcome: **No** — CertTalk underperformed Send-All on both success rate and bytes; additional debugging required before rerunning baseline comparison.
+- Follow-up: Investigate why CertTalk (and Cut-Grow) stall at ~23% success despite zero path gaps on successful cases; inspect transcripts in `runs/20251008T151417Z_*.jsonl` and adjust agent policies.
 
 ---
