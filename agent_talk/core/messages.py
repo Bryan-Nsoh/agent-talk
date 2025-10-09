@@ -3,9 +3,35 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, Literal, TypedDict
+from typing import Any, Dict, Literal
 
 from .crc16 import crc16_for_fields
+
+# Optional compact schema toggle (short keys to trim bytes)
+COMPACT_SCHEMA: bool = False
+
+TOP_MAP = {"type": "t", "payload": "p", "schema": "s", "seq": "q", "crc16": "c"}
+REV_TOP_MAP = {v: k for k, v in TOP_MAP.items()}
+
+PAYLOAD_MAP = {
+    "encoding": "e",
+    "digest16": "d",
+    "witness": "w",
+    "signed_by": "sb",
+    "ack_of": "a",
+    "nack_of": "n",
+    "conflicts": "x",
+    "cells": "cs",
+    "runs": "r",
+    "blocked": "b",
+    "what": "wht",
+}
+REV_PAYLOAD_MAP = {v: k for k, v in PAYLOAD_MAP.items()}
+
+
+def set_compact_schema(flag: bool) -> None:
+    global COMPACT_SCHEMA
+    COMPACT_SCHEMA = bool(flag)
 
 SchemaLiteral = Literal["v1"]
 
@@ -45,12 +71,25 @@ class Msg:
         return crc16_for_fields(self.type, payload_bytes)
 
     def to_json(self) -> str:
+        if not COMPACT_SCHEMA:
+            out = {
+                "type": self.type,
+                "payload": self.payload,
+                "schema": self.schema,
+                "seq": self.seq,
+                "crc16": self.crc16,
+            }
+            return json.dumps(out, separators=(",", ":"), sort_keys=True)
+        # Compact top-level and payload keys
+        compact_payload = {
+            (PAYLOAD_MAP.get(k, k)): v for k, v in self.payload.items()
+        }
         out = {
-            "type": self.type,
-            "payload": self.payload,
-            "schema": self.schema,
-            "seq": self.seq,
-            "crc16": self.crc16,
+            TOP_MAP["type"]: self.type,
+            TOP_MAP["payload"]: compact_payload,
+            TOP_MAP["schema"]: self.schema,
+            TOP_MAP["seq"]: self.seq,
+            TOP_MAP["crc16"]: self.crc16,
         }
         return json.dumps(out, separators=(",", ":"), sort_keys=True)
 
@@ -60,6 +99,18 @@ class Msg:
             raw = json.loads(data)
         except json.JSONDecodeError as exc:
             raise MessageError(f"invalid JSON: {exc}") from exc
+        # Support both standard and compact forms
+        if "type" not in raw and "t" in raw:
+            # Expand compact
+            payload = raw.get("p", {})
+            expanded_payload = {REV_PAYLOAD_MAP.get(k, k): v for k, v in payload.items()}
+            raw = {
+                "type": raw.get("t"),
+                "payload": expanded_payload,
+                "schema": raw.get("s"),
+                "seq": raw.get("q"),
+                "crc16": raw.get("c"),
+            }
         required = {"type", "payload", "schema", "seq", "crc16"}
         if not required.issubset(raw):
             missing = required - raw.keys()

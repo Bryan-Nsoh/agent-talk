@@ -1,0 +1,5 @@
+system,split,count,success_rate,correctness,bytes_median,rounds_median,path_gap_median,cut_gap_median,interpretability
+certtalk,all,1000,1.0,1.0,653.5,7.0,0.0,0.0,1.0
+sendall,all,1000,1.0,1.0,466.0,3.0,0.0,0.0,1.0
+greedyprobe,all,1000,1.0,1.0,872.5,7.0,0.0,0.0,1.0
+respondermincut,all,1000,0.205,0.205,667.0,6.0,,0,0.205

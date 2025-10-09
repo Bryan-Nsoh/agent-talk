@@ -13,10 +13,13 @@ from agent_talk.agents import (
     AgentConfig,
     SendAllAgentA,
     SendAllAgentB,
+    ResponderMinCutA,
+    ResponderMinCutB,
 )
 from agent_talk.core.coords import bytes_to_coords, decode_cells_delta16
 from agent_talk.core.rle import decode_path_rle4
 from agent_talk.core.protocol import ConversationLimits
+from agent_talk.core.messages import set_compact_schema
 from agent_talk.env.grid import Grid
 from agent_talk.io import CacheEntry, iter_cache, append_log
 from agent_talk.oracle.oracle import OracleError, verify_cut_cert, verify_path_cert, union_grid
@@ -139,6 +142,12 @@ def instantiate_agents(system: str, config_a: AgentConfig, config_b: AgentConfig
     if system == "sendall":
         chunk_size = system_cfg.get("chunk_size", 32)
         return SendAllAgentA(config_a, chunk_size=chunk_size), SendAllAgentB(config_b, chunk_size=chunk_size)
+    if system in {"respondmincut", "respondermincut"}:
+        # B leads with cut cert; A initiates with SCHEMA and validates.
+        # For symmetry, use allow_cut only.
+        config_a.allow_path = False
+        config_b.allow_path = False
+        return ResponderMinCutA(config_a), ResponderMinCutB(config_b)
     raise ValueError(f"unknown system {system}")
 
 
@@ -176,6 +185,8 @@ def run(cache: Path, system: str, out: Path, config_path: Path, ablation: Option
         ablation_cfg = ablations.get(ablation, {}) if isinstance(ablations, dict) else {}
     merged_cfg = apply_ablation(system_cfg, ablation_cfg)
     limits = make_limits(limits_cfg)
+    # Optional compact schema toggle (per system)
+    set_compact_schema(bool(merged_cfg.get("compact_schema", False)))
 
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", encoding="utf-8") as fh:
