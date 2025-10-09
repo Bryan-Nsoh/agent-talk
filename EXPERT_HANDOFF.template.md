@@ -1,25 +1,25 @@
-Last updated: 2025-10-09T16:55Z (UTC)
+Last updated: 2025-10-09T20:10Z (UTC)
 
 ## Summary (raw)
-<include path="runs/20251009T165537Z_summary.csv" lang="text" block="code"/>
+<include path="runs/20251009T201059Z_summary.csv" lang="text" block="code"/>
 
 ## Dataset sample (raw)
 <include path="data/20251008T151417Z_cache.jsonl" lang="json" head="3" block="code"/>
 
 ## Representative transcripts/logs (raw)
-<include path="runs/20251009T165448Z_certtalk.jsonl" jsonl_match="seed=123" block="code"/>
-<include path="runs/20251009T165448Z_certtalk.jsonl" jsonl_match="seed=126" block="code"/>
-<include path="runs/20251009T165521Z_respondmincut.jsonl" jsonl_match="seed=131" block="code"/>
+<include path="runs/20251009T201009Z_certtalk.jsonl" jsonl_match="seed=123" block="code"/>
+<include path="runs/20251009T201009Z_certtalk.jsonl" jsonl_match="seed=126" block="code"/>
+<include path="runs/20251009T201043Z_respondmincut.jsonl" jsonl_match="seed=131" block="code"/>
 
 ## Reproduction commands (raw)
 ```
 uv venv && source .venv/bin/activate && uv pip install -e .[dev]
 uv run python -m agent_talk.env.generator --out data/20251008T151417Z_cache.jsonl --n 1000 --size 10 --seed 123
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system certtalk --out runs/20251009T165448Z_certtalk.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system sendall --out runs/20251009T165501Z_sendall.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system greedyprobe --out runs/20251009T165507Z_greedyprobe.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system respondermincut --out runs/20251009T165521Z_respondmincut.jsonl
-uv run python -m agent_talk.analysis.metrics --inputs runs/20251009T165448Z_certtalk.jsonl runs/20251009T165501Z_sendall.jsonl runs/20251009T165507Z_greedyprobe.jsonl runs/20251009T165521Z_respondmincut.jsonl --out runs/20251009T165537Z_summary.csv
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system certtalk --out runs/20251009T201009Z_certtalk.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system sendall --out runs/20251009T201024Z_sendall.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system greedyprobe --out runs/20251009T201034Z_greedyprobe.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system respondermincut --out runs/20251009T201043Z_respondmincut.jsonl
+uv run python -m agent_talk.analysis.metrics --inputs runs/20251009T201009Z_certtalk.jsonl runs/20251009T201024Z_sendall.jsonl runs/20251009T201034Z_greedyprobe.jsonl runs/20251009T201043Z_respondmincut.jsonl --out runs/20251009T201059Z_summary.csv
 ```
 
 ## Code (verbatim, raw)

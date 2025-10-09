@@ -1,0 +1,39 @@
+{
+  "system": "greedyprobe",
+  "split": "all",
+  "seed": 123,
+  "outcome": "DONE",
+  "bytes": 276,
+  "rounds": 3,
+  "certificate_type": "CUT_CERT",
+  "oracle_accepted": true,
+  "path_gap": null,
+  "cut_gap": 0,
+  "reason": null,
+  "ablation": null,
+  "transcript": [
+    {
+      "sender": "A",
+      "message": "{\"c\":10141,\"p\":{\"cs\":\"AAACAAEAAf4AAQ==\",\"d\":46585,\"k\":4,\"w\":\"AA==\"},\"q\":0,\"s\":\"v1\",\"t\":\"CUT_PROPOSE\"}",
+      "bytes": 101
+    },
+    {
+      "sender": "B",
+      "message": "{\"c\":4584,\"p\":{\"cs\":\"AAACAAEAAf4AAQ==\",\"d\":46585,\"k\":4,\"sb\":[\"B\"],\"w\":\"AA==\"},\"q\":0,\"s\":\"v1\",\"t\":\"CUT_CERT\"}",
+      "bytes": 108
+    },
+    {
+      "sender": "A",
+      "message": "{\"c\":36481,\"p\":{\"a\":\"CUT_CERT\",\"d\":46585},\"q\":1,\"s\":\"v1\",\"t\":\"ACK\"}",
+      "bytes": 67,
+      "terminal": true
+    }
+  ],
+  "diagnostics": {
+    "a_belief_blocks": 0,
+    "a_belief_free": 0,
+    "a_failed_path_digests": 0,
+    "a_failed_cut_digests": 0,
+    "b_peer_blocks_from_a": 4
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "system": "respondermincut",
+  "split": "all",
+  "seed": 123,
+  "outcome": "DONE",
+  "bytes": 520,
+  "rounds": 6,
+  "certificate_type": "CUT_CERT",
+  "oracle_accepted": false,
+  "path_gap": null,
+  "cut_gap": null,
+  "reason": null,
+  "ablation": null,
+  "transcript": [
+    {
+      "sender": "A",
+      "message": "{\"c\":64959,\"p\":{\"cut_enc\":\"DELTA16_v1\",\"path_enc\":\"RLE4_v1\",\"s\":[0,0],\"size\":[10,10],\"t\":[9,9]},\"q\":0,\"s\":\"v1\",\"t\":\"SCHEMA\"}",
+      "bytes": 124
+    },
+    {
+      "sender": "B",
+      "message": "{\"c\":19912,\"p\":{\"cs\":\"\",\"d\":65535,\"k\":0,\"sb\":[\"B\"],\"w\":\"\"},\"q\":0,\"s\":\"v1\",\"t\":\"CUT_CERT\"}",
+      "bytes": 89
+    },
+    {
+      "sender": "A",
+      "message": "{\"c\":35132,\"p\":{\"n\":\"CUT_PROPOSE\",\"reason\":\"BLOCKED\",\"x\":[]},\"q\":1,\"s\":\"v1\",\"t\":\"NACK\"}",
+      "bytes": 87
+    },
+    {
+      "sender": "B",
+      "message": "{\"c\":19912,\"p\":{\"cs\":\"\",\"d\":65535,\"k\":0,\"sb\":[\"B\"],\"w\":\"\"},\"q\":1,\"s\":\"v1\",\"t\":\"CUT_CERT\"}",
+      "bytes": 89
+    },
+    {
+      "sender": "A",
+      "message": "{\"c\":35132,\"p\":{\"n\":\"CUT_PROPOSE\",\"reason\":\"BLOCKED\",\"x\":[]},\"q\":2,\"s\":\"v1\",\"t\":\"NACK\"}",
+      "bytes": 87
+    },
+    {
+      "sender": "B",
+      "message": "{\"c\":22322,\"p\":{},\"q\":2,\"s\":\"v1\",\"t\":\"DONE\"}",
+      "bytes": 44
+    }
+  ],
+  "diagnostics": {}
+}

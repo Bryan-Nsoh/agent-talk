@@ -1,0 +1,33 @@
+{
+  "system": "sendall",
+  "split": "all",
+  "seed": 123,
+  "outcome": "DONE",
+  "bytes": 352,
+  "rounds": 3,
+  "certificate_type": "CUT_CERT",
+  "oracle_accepted": true,
+  "path_gap": null,
+  "cut_gap": 0,
+  "reason": null,
+  "ablation": null,
+  "transcript": [
+    {
+      "sender": "A",
+      "message": "{\"c\":46212,\"p\":{\"chunk\":0,\"final\":true,\"indices\":[2,4,8,12,14,16,20,21,23,46,55,60,62,78,79,86,87,89,91,93],\"total\":1,\"wht\":\"CELLS\"},\"q\":0,\"s\":\"v1\",\"t\":\"PROBE\"}",
+      "bytes": 160
+    },
+    {
+      "sender": "B",
+      "message": "{\"c\":1950,\"p\":{\"cs\":\"AgAAAAAB/gEBAA==\",\"d\":44276,\"e\":\"DELTA16_v1\",\"k\":4,\"sb\":[\"B\"],\"w\":\"Ag==\"},\"q\":0,\"s\":\"v1\",\"t\":\"CUT_CERT\"}",
+      "bytes": 125
+    },
+    {
+      "sender": "A",
+      "message": "{\"c\":57933,\"p\":{\"a\":\"CUT_CERT\",\"d\":44276},\"q\":1,\"s\":\"v1\",\"t\":\"ACK\"}",
+      "bytes": 67,
+      "terminal": true
+    }
+  ],
+  "diagnostics": {}
+}

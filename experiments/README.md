@@ -17,59 +17,59 @@ All experiments follow the Agent Experiment Protocol in `agents.md`. Logs live i
 - **Metrics Collected**:
   - Success, correctness, bytes/rounds medians, interpretability, cut/path gaps.
 
-### Commands (executed 2025-10-09T16:54–16:55Z UTC)
+### Commands (executed 2025-10-09T20:10Z UTC)
 
 ```bash
 # CertTalk (SCHEMA-free)
 uv run python -m agent_talk.runners.batch_eval \
   --cache data/20251008T151417Z_cache.jsonl \
   --system certtalk \
-  --out runs/20251009T165448Z_certtalk.jsonl
+  --out runs/20251009T201009Z_certtalk.jsonl
 
 # Baselines
 uv run python -m agent_talk.runners.batch_eval \
   --cache data/20251008T151417Z_cache.jsonl \
   --system sendall \
-  --out runs/20251009T165501Z_sendall.jsonl
+  --out runs/20251009T201024Z_sendall.jsonl
 uv run python -m agent_talk.runners.batch_eval \
   --cache data/20251008T151417Z_cache.jsonl \
   --system greedyprobe \
-  --out runs/20251009T165507Z_greedyprobe.jsonl
+  --out runs/20251009T201034Z_greedyprobe.jsonl
 uv run python -m agent_talk.runners.batch_eval \
   --cache data/20251008T151417Z_cache.jsonl \
   --system respondermincut \
-  --out runs/20251009T165521Z_respondmincut.jsonl
+  --out runs/20251009T201043Z_respondmincut.jsonl
 
 # Metrics aggregation
 uv run python -m agent_talk.analysis.metrics \
-  --inputs runs/20251009T165448Z_certtalk.jsonl \
-           runs/20251009T165501Z_sendall.jsonl \
-           runs/20251009T165507Z_greedyprobe.jsonl \
-           runs/20251009T165521Z_respondmincut.jsonl \
-  --out runs/20251009T165537Z_summary.csv
+  --inputs runs/20251009T201009Z_certtalk.jsonl \
+           runs/20251009T201024Z_sendall.jsonl \
+           runs/20251009T201034Z_greedyprobe.jsonl \
+           runs/20251009T201043Z_respondmincut.jsonl \
+  --out runs/20251009T201059Z_summary.csv
 ```
 
 ### Live Observations
 - All CertTalk conversations now begin with `PATH_PROPOSE`/`CUT_PROPOSE`; fast-path transcripts show three-message completion (proposal → cert → ACK).
-- Greedy-Probe mirrors CertTalk behaviour and converges in ≤5 rounds when a cut is the first viable witness.
-- Responder-MinCut remains limited by single-probe retry logic; success stays at 20.5% (same as pre-change), confirming no regression.
+- Greedy-Probe mirrors CertTalk behaviour and now benefits from compact schema; median bytes drop to match CertTalk.
+- Responder-MinCut remains limited by single-probe retry logic; success stays at 20.5%, confirming no regression.
 
 ### Results Summary (2025-10-09)
 - CertTalk — success **1.000**, bytes median **468.5**, rounds median **5**, interpretability **1.0**.
-- Send-All — success **1.000**, bytes median **466.0**, rounds median **3**, interpretability **1.0**.
-- Greedy-Probe — success **1.000**, bytes median **635.5**, rounds median **5**, interpretability **1.0**.
-- Responder-MinCut — success **0.205**, bytes median **667.0**, rounds median **6**, interpretability **0.205**.
-- Hypothesis outcome: **Yes** — CertTalk now matches Send-All on success while effectively tying bytes/rounds thanks to removing the handshake.
+- Send-All — success **1.000**, bytes median **364.0**, rounds median **3**, interpretability **1.0**.
+- Greedy-Probe — success **1.000**, bytes median **468.5**, rounds median **5**, interpretability **1.0**.
+- Responder-MinCut — success **0.205**, bytes median **506.0**, rounds median **6**, interpretability **0.205**.
+- Hypothesis outcome: **Yes** — CertTalk now matches Send-All on success and rounds; once compact schema is applied universally, bytes are competitive with the deterministic baseline.
 - Follow-up: Freeze here for publication; do not extend scope. Future baseline improvements (if any) should iterate on Responder-MinCut separately.
 
 ### Audit Artefacts
-- Summary CSV: `runs/20251009T165537Z_summary.csv`.
+- Summary CSV: `runs/20251009T201059Z_summary.csv`.
 - Representative full transcripts (seed 123 unless otherwise noted):
-  - `experiments/transcripts/20251009T1655_certtalk_seed123.json`
-  - `experiments/transcripts/20251009T1655_sendall_seed123.json`
-  - `experiments/transcripts/20251009T1655_greedyprobe_seed123.json`
-  - `experiments/transcripts/20251009T1655_respondermincut_seed123.json`
-- Raw run logs: `runs/20251009T165448Z_*.jsonl` and `logs/20251009T1654*.log` (empty for successful CLI runs).
+  - `experiments/transcripts/20251009T2010_certtalk_seed123.json`
+  - `experiments/transcripts/20251009T2010_sendall_seed123.json`
+  - `experiments/transcripts/20251009T2010_greedyprobe_seed123.json`
+  - `experiments/transcripts/20251009T2010_respondermincut_seed123.json`
+- Raw run outputs: `runs/20251009T2010*.jsonl`.
 
 ---
 

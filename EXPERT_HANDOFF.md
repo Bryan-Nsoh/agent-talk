@@ -1,12 +1,12 @@
-Last updated: 2025-10-09T16:55Z (UTC)
+Last updated: 2025-10-09T20:10Z (UTC)
 
 ## Summary (raw)
 ```text
 system,split,count,success_rate,correctness,bytes_median,rounds_median,path_gap_median,cut_gap_median,interpretability
 certtalk,all,1000,1.0,1.0,468.5,5.0,0.0,0.0,1.0
-sendall,all,1000,1.0,1.0,466.0,3.0,0.0,0.0,1.0
-greedyprobe,all,1000,1.0,1.0,635.5,5.0,0.0,0.0,1.0
-respondermincut,all,1000,0.205,0.205,667.0,6.0,,0,0.205
+sendall,all,1000,1.0,1.0,364.0,3.0,0.0,0.0,1.0
+greedyprobe,all,1000,1.0,1.0,468.5,5.0,0.0,0.0,1.0
+respondermincut,all,1000,0.205,0.205,506.0,6.0,,0,0.205
 ```
 
 
@@ -28,7 +28,7 @@ respondermincut,all,1000,0.205,0.205,667.0,6.0,,0,0.205
 ```
 
 ```text
-{"system":"respondermincut","split":"all","seed":131,"outcome":"DONE","bytes":719,"rounds":6,"certificate_type":"CUT_CERT","oracle_accepted":true,"path_gap":null,"cut_gap":1,"reason":null,"ablation":null,"transcript":[{"sender":"A","message":"{\"crc16\":64959,\"payload\":{\"cut_enc\":\"DELTA16_v1\",\"path_enc\":\"RLE4_v1\",\"s\":[0,0],\"size\":[10,10],\"t\":[9,9]},\"schema\":\"v1\",\"seq\":0,\"type\":\"SCHEMA\"}","bytes":144},{"sender":"B","message":"{\"crc16\":24093,\"payload\":{\"cells\":\"CQAEAP8B/gEBAP4BAQEBAQ==\",\"digest16\":48350,\"k\":7,\"signed_by\":[\"B\"],\"witness\":\"fw==\"},\"schema\":\"v1\",\"seq\":0,\"type\":\"CUT_CERT\"}","bytes":160},{"sender":"A","message":"{\"crc16\":11739,\"payload\":{\"conflicts\":[[9,4],[8,5],[6,6],[7,6],[5,7],[6,8],[7,9]],\"nack_of\":\"CUT_PROPOSE\",\"reason\":\"BLOCKED\"},\"schema\":\"v1\",\"seq\":1,\"type\":\"NACK\"}","bytes":162},{"sender":"B","message":"{\"crc16\":8151,\"payload\":{\"cells\":[[9,4],[8,5],[6,6],[7,6],[5,7],[6,8]],\"what\":\"CELLS\"},\"schema\":\"v1\",\"seq\":1,\"type\":\"PROBE\"}","bytes":124},{"sender":"A","message":"{\"crc16\":26486,\"payload\":{},\"schema\":\"v1\",\"seq\":2,\"type\":\"HELLO\"}","bytes":65},{"sender":"B","message":"{\"crc16\":22322,\"payload\":{},\"schema\":\"v1\",\"seq\":2,\"type\":\"DONE\"}","bytes":64}],"diagnostics":{}}
+{"system":"respondermincut","split":"all","seed":131,"outcome":"DONE","bytes":558,"rounds":6,"certificate_type":"CUT_CERT","oracle_accepted":true,"path_gap":null,"cut_gap":1,"reason":null,"ablation":null,"transcript":[{"sender":"A","message":"{\"c\":64959,\"p\":{\"cut_enc\":\"DELTA16_v1\",\"path_enc\":\"RLE4_v1\",\"s\":[0,0],\"size\":[10,10],\"t\":[9,9]},\"q\":0,\"s\":\"v1\",\"t\":\"SCHEMA\"}","bytes":124},{"sender":"B","message":"{\"c\":24093,\"p\":{\"cs\":\"CQAEAP8B/gEBAP4BAQEBAQ==\",\"d\":48350,\"k\":7,\"sb\":[\"B\"],\"w\":\"fw==\"},\"q\":0,\"s\":\"v1\",\"t\":\"CUT_CERT\"}","bytes":117},{"sender":"A","message":"{\"c\":11739,\"p\":{\"n\":\"CUT_PROPOSE\",\"reason\":\"BLOCKED\",\"x\":[[9,4],[8,5],[6,6],[7,6],[5,7],[6,8],[7,9]]},\"q\":1,\"s\":\"v1\",\"t\":\"NACK\"}","bytes":128},{"sender":"B","message":"{\"c\":8151,\"p\":{\"cs\":[[9,4],[8,5],[6,6],[7,6],[5,7],[6,8]],\"wht\":\"CELLS\"},\"q\":1,\"s\":\"v1\",\"t\":\"PROBE\"}","bytes":100},{"sender":"A","message":"{\"c\":26486,\"p\":{},\"q\":2,\"s\":\"v1\",\"t\":\"HELLO\"}","bytes":45},{"sender":"B","message":"{\"c\":22322,\"p\":{},\"q\":2,\"s\":\"v1\",\"t\":\"DONE\"}","bytes":44}],"diagnostics":{}}
 ```
 
 
@@ -36,11 +36,11 @@ respondermincut,all,1000,0.205,0.205,667.0,6.0,,0,0.205
 ```
 uv venv && source .venv/bin/activate && uv pip install -e .[dev]
 uv run python -m agent_talk.env.generator --out data/20251008T151417Z_cache.jsonl --n 1000 --size 10 --seed 123
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system certtalk --out runs/20251009T165448Z_certtalk.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system sendall --out runs/20251009T165501Z_sendall.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system greedyprobe --out runs/20251009T165507Z_greedyprobe.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system respondermincut --out runs/20251009T165521Z_respondmincut.jsonl
-uv run python -m agent_talk.analysis.metrics --inputs runs/20251009T165448Z_certtalk.jsonl runs/20251009T165501Z_sendall.jsonl runs/20251009T165507Z_greedyprobe.jsonl runs/20251009T165521Z_respondmincut.jsonl --out runs/20251009T165537Z_summary.csv
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system certtalk --out runs/20251009T201009Z_certtalk.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system sendall --out runs/20251009T201024Z_sendall.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system greedyprobe --out runs/20251009T201034Z_greedyprobe.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system respondermincut --out runs/20251009T201043Z_respondmincut.jsonl
+uv run python -m agent_talk.analysis.metrics --inputs runs/20251009T201009Z_certtalk.jsonl runs/20251009T201024Z_sendall.jsonl runs/20251009T201034Z_greedyprobe.jsonl runs/20251009T201043Z_respondmincut.jsonl --out runs/20251009T201059Z_summary.csv
 ```
 
 ## Code (verbatim, raw)
@@ -1843,34 +1843,6 @@ def simulate_conversation(agent_a: AgentA, agent_b: AgentB, limits: Optional[Con
         if message.type == "DONE":
             outcome = "DONE"
             break
-
-        # 80% byte guard: force exactly one PROBE from A, then attempt cert next turn
-        if (
-            not guard_used
-            and certificate_type is None
-            and bytes_used > int(0.8 * limits.max_total_bytes)
-            and sender == "A"
-        ):
-            # Try to trigger a small probe on unknown cut cells
-            try:
-                # Ensure a cut exists
-                if getattr(agent_a, "current_cut", None) is None:
-                    cut = agent_a._plan_cut()  # type: ignore[attr-defined]
-                    if cut:
-                        agent_a.current_cut = cut  # type: ignore[attr-defined]
-                # Compose a small set of probe cells from current_cut
-                belief_b = getattr(agent_a, "belief_peer_blocks", set())
-                belief_f = getattr(agent_a, "belief_peer_free", set())
-                current_cut = getattr(agent_a, "current_cut", [])
-                unknown = [c for c in current_cut if c not in belief_b and c not in belief_f]
-                probe_cells = unknown[: getattr(agent_a, "PROBE_LIMIT", 6)]
-                if probe_cells:
-                    agent_a.pending_probe = probe_cells  # type: ignore[attr-defined]
-                    agent_a.state = "SEND_PROBE"  # type: ignore[attr-defined]
-                    guard_used = True
-            except Exception:
-                # If anything goes wrong, ignore the guard and continue
-                guard_used = True
 
         if sender == "A":
             incoming_for_b = message

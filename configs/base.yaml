@@ -9,8 +9,13 @@ systems:
     max_path_length: 64
     compact_schema: true
   sendall:
+    compact_schema: true
     chunk_size: 32
   greedyprobe:
+    compact_schema: true
     max_probes: 12
   cutgrow:
+    compact_schema: true
+  respondermincut:
+    compact_schema: true
     max_iterations: 12

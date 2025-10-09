@@ -79,34 +79,6 @@ def simulate_conversation(agent_a: AgentA, agent_b: AgentB, limits: Optional[Con
             outcome = "DONE"
             break
 
-        # 80% byte guard: force exactly one PROBE from A, then attempt cert next turn
-        if (
-            not guard_used
-            and certificate_type is None
-            and bytes_used > int(0.8 * limits.max_total_bytes)
-            and sender == "A"
-        ):
-            # Try to trigger a small probe on unknown cut cells
-            try:
-                # Ensure a cut exists
-                if getattr(agent_a, "current_cut", None) is None:
-                    cut = agent_a._plan_cut()  # type: ignore[attr-defined]
-                    if cut:
-                        agent_a.current_cut = cut  # type: ignore[attr-defined]
-                # Compose a small set of probe cells from current_cut
-                belief_b = getattr(agent_a, "belief_peer_blocks", set())
-                belief_f = getattr(agent_a, "belief_peer_free", set())
-                current_cut = getattr(agent_a, "current_cut", [])
-                unknown = [c for c in current_cut if c not in belief_b and c not in belief_f]
-                probe_cells = unknown[: getattr(agent_a, "PROBE_LIMIT", 6)]
-                if probe_cells:
-                    agent_a.pending_probe = probe_cells  # type: ignore[attr-defined]
-                    agent_a.state = "SEND_PROBE"  # type: ignore[attr-defined]
-                    guard_used = True
-            except Exception:
-                # If anything goes wrong, ignore the guard and continue
-                guard_used = True
-
         if sender == "A":
             incoming_for_b = message
             sender = "B"
