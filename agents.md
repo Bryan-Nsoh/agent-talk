@@ -28,7 +28,6 @@ Last updated 2025-10-06 — Ground rules for documenting experiments so future r
 - Link to artifacts (logs, JSON summaries, exported CSVs) using relative paths.
 
 ### 4. Cleanup Checklist
-- Ensure `agents/handoff.md` notes the latest run state and where to pick up.
 - Archive stray scripts/configs into the experiment folder or delete them—no loose files at repo root.
 - Delete artifacts from aborted or superseded runs immediately (logs, `runs/<id>`, resume files)—do not leave half-finished outputs lying around.
 - Update the skills catalog or related playbooks if the process changed.
