@@ -34,24 +34,41 @@ scripts/       # convenience CLI wrappers
 tests/         # unit tests covering codecs, messages, oracle, protocol, agents
 ```
 
-## Quick Commands
+## Latest Results (2025-10-09 SCHEMA-free rerun)
 
-Generate an instance cache (JSONL):
+- CertTalk: success 1.000, median 468.5 bytes / 5 rounds.
+- Send-All: success 1.000, median 466.0 bytes / 3 rounds.
+- Greedy-Probe: success 1.000, median 635.5 bytes / 5 rounds.
+- Responder-MinCut: success 0.205, median 667.0 bytes / 6 rounds.
+
+Full summaries live in `runs/20251009T165537Z_summary.csv` with transcripts under `experiments/transcripts/`.
+
+## Reproduce the 1k Run
+
+Generate the shared cache:
 
 ```bash
-uv run python -m agent_talk.env.generator --out data/cache.jsonl --n 1000 --size 10 --seed 123
+uv run python -m agent_talk.env.generator --out data/20251008T151417Z_cache.jsonl --n 1000 --size 10 --seed 123
 ```
 
-Run the main system on the cache:
+Run CertTalk and baselines (SCHEMA-free protocol):
 
 ```bash
-uv run python -m agent_talk.runners.batch_eval --cache data/cache.jsonl --system certtalk --out out/certtalk.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system certtalk --out runs/20251009T165448Z_certtalk.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system sendall --out runs/20251009T165501Z_sendall.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system greedyprobe --out runs/20251009T165507Z_greedyprobe.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system respondermincut --out runs/20251009T165521Z_respondmincut.jsonl
 ```
 
-Summarise metrics across systems:
+Aggregate metrics:
 
 ```bash
-uv run python -m agent_talk.analysis.metrics --inputs out/certtalk.jsonl --out out/summary.csv
+uv run python -m agent_talk.analysis.metrics --inputs \
+  runs/20251009T165448Z_certtalk.jsonl \
+  runs/20251009T165501Z_sendall.jsonl \
+  runs/20251009T165507Z_greedyprobe.jsonl \
+  runs/20251009T165521Z_respondmincut.jsonl \
+  --out runs/20251009T165537Z_summary.csv
 ```
 
 ## Testing
