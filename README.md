@@ -32,6 +32,16 @@ agent_talk/
 configs/       # YAML configs for main and ablation runs
 scripts/       # convenience CLI wrappers
 tests/         # unit tests covering codecs, messages, oracle, protocol, agents
+agents.md      # experiment protocol (mirrors Agent Experiment Playbook)
+experiments/   # run log + transcript snapshots for audit
+runs/          # JSONL outputs and summary CSVs (latest: 20251009T1655)
+logs/          # timestamps of the batch commands (one per run)
+data/          # cached datasets (`20251008T151417Z_cache.jsonl`)
+scripts/       # CLI helpers (`run_eval.sh`, `run_ablations.sh`, `expand_includes.py`)
+final_runs_raw.txt # concatenated raw JSONL for the final systems (20251009T1655)
+EXPERT_HANDOFF*.md # templated + expanded expert bundle (self-contained)
+HANDOFF_SPEC.md    # instructions for generating the expert handoff
+uv.lock / pyproject.toml # dependency and project metadata
 ```
 
 ## Latest Results (2025-10-09 SCHEMA-free rerun)
