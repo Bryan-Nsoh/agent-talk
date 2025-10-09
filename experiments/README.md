@@ -4,6 +4,75 @@ All experiments follow the Agent Experiment Protocol in `agents.md`. Logs live i
 
 ---
 
+## Experiment: 2025-10-09 CertTalk SCHEMA Removal Rerun
+
+- **Objective**: Confirm that removing the SCHEMA handshake preserves 100% correctness while matching Send-All on bytes/rounds.
+- **Hypothesis / Expected Outcome**: CertTalk and Greedy-Probe drop ~185 bytes and 2 rounds per conversation, landing within noise of Send-All.
+- **Variables**:
+  - Systems: `certtalk`, `sendall`, `greedyprobe`, `respondermincut`.
+  - Dataset: `data/20251008T151417Z_cache.jsonl` (1k instances, identical to prior runs).
+- **Invariants**:
+  - Message schema `v1`, compact key encoding enabled.
+  - Conversation limits from `configs/base.yaml`.
+- **Metrics Collected**:
+  - Success, correctness, bytes/rounds medians, interpretability, cut/path gaps.
+
+### Commands (executed 2025-10-09T16:54–16:55Z UTC)
+
+```bash
+# CertTalk (SCHEMA-free)
+uv run python -m agent_talk.runners.batch_eval \
+  --cache data/20251008T151417Z_cache.jsonl \
+  --system certtalk \
+  --out runs/20251009T165448Z_certtalk.jsonl
+
+# Baselines
+uv run python -m agent_talk.runners.batch_eval \
+  --cache data/20251008T151417Z_cache.jsonl \
+  --system sendall \
+  --out runs/20251009T165501Z_sendall.jsonl
+uv run python -m agent_talk.runners.batch_eval \
+  --cache data/20251008T151417Z_cache.jsonl \
+  --system greedyprobe \
+  --out runs/20251009T165507Z_greedyprobe.jsonl
+uv run python -m agent_talk.runners.batch_eval \
+  --cache data/20251008T151417Z_cache.jsonl \
+  --system respondermincut \
+  --out runs/20251009T165521Z_respondmincut.jsonl
+
+# Metrics aggregation
+uv run python -m agent_talk.analysis.metrics \
+  --inputs runs/20251009T165448Z_certtalk.jsonl \
+           runs/20251009T165501Z_sendall.jsonl \
+           runs/20251009T165507Z_greedyprobe.jsonl \
+           runs/20251009T165521Z_respondmincut.jsonl \
+  --out runs/20251009T165537Z_summary.csv
+```
+
+### Live Observations
+- All CertTalk conversations now begin with `PATH_PROPOSE`/`CUT_PROPOSE`; fast-path transcripts show three-message completion (proposal → cert → ACK).
+- Greedy-Probe mirrors CertTalk behaviour and converges in ≤5 rounds when a cut is the first viable witness.
+- Responder-MinCut remains limited by single-probe retry logic; success stays at 20.5% (same as pre-change), confirming no regression.
+
+### Results Summary (2025-10-09)
+- CertTalk — success **1.000**, bytes median **468.5**, rounds median **5**, interpretability **1.0**.
+- Send-All — success **1.000**, bytes median **466.0**, rounds median **3**, interpretability **1.0**.
+- Greedy-Probe — success **1.000**, bytes median **635.5**, rounds median **5**, interpretability **1.0**.
+- Responder-MinCut — success **0.205**, bytes median **667.0**, rounds median **6**, interpretability **0.205**.
+- Hypothesis outcome: **Yes** — CertTalk now matches Send-All on success while effectively tying bytes/rounds thanks to removing the handshake.
+- Follow-up: Freeze here for publication; do not extend scope. Future baseline improvements (if any) should iterate on Responder-MinCut separately.
+
+### Audit Artefacts
+- Summary CSV: `runs/20251009T165537Z_summary.csv`.
+- Representative full transcripts (seed 123 unless otherwise noted):
+  - `experiments/transcripts/20251009T1655_certtalk_seed123.json`
+  - `experiments/transcripts/20251009T1655_sendall_seed123.json`
+  - `experiments/transcripts/20251009T1655_greedyprobe_seed123.json`
+  - `experiments/transcripts/20251009T1655_respondermincut_seed123.json`
+- Raw run logs: `runs/20251009T165448Z_*.jsonl` and `logs/20251009T1654*.log` (empty for successful CLI runs).
+
+---
+
 ## Experiment: 2025-10-08 CertTalk Witness + Probe Upgrades
 
 - **Objective**: Validate witness-bit schema, targeted probes, and planning halo on the same 10×10 cache; re-measure all baseline systems after the protocol fix.

@@ -20,7 +20,7 @@ class AgentA(FiniteStateAgent):
 
     def __init__(self, config: AgentConfig) -> None:
         super().__init__(config)
-        self.state = "SEND_SCHEMA"
+        self.state = "PLAN_PATH" if self.config.allow_path else "PLAN_CUT"
         self.belief_peer_blocks: Set[Coordinate] = set()
         self.belief_peer_free: Set[Coordinate] = set()
         self.path_attempts = 0
@@ -173,18 +173,6 @@ class AgentA(FiniteStateAgent):
 
             if self.state == "AWAIT_PROBE_REPLY":
                 raise RuntimeError("Agent A awaiting probe reply")
-
-            if self.state == "SEND_SCHEMA":
-                payload = {
-                    "s": list(self.config.start),
-                    "t": list(self.config.goal),
-                    "size": [self.config.width, self.config.height],
-                    "path_enc": "RLE4_v1",
-                    "cut_enc": "DELTA16_v1",
-                }
-                # After schema, continue as before
-                self.state = "PLAN_PATH" if self.config.allow_path else "PLAN_CUT"
-                return self.make_message("SCHEMA", payload)
 
             if self.state == "SEND_YIELD":
                 self.state = "AWAIT_YIELD_ACK"

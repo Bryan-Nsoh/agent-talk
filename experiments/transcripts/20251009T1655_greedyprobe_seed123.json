@@ -1,0 +1,39 @@
+{
+  "system": "greedyprobe",
+  "split": "all",
+  "seed": 123,
+  "outcome": "DONE",
+  "bytes": 387,
+  "rounds": 3,
+  "certificate_type": "CUT_CERT",
+  "oracle_accepted": true,
+  "path_gap": null,
+  "cut_gap": 0,
+  "reason": null,
+  "ablation": null,
+  "transcript": [
+    {
+      "sender": "A",
+      "message": "{\"crc16\":10141,\"payload\":{\"cells\":\"AAACAAEAAf4AAQ==\",\"digest16\":46585,\"k\":4,\"witness\":\"AA==\"},\"schema\":\"v1\",\"seq\":0,\"type\":\"CUT_PROPOSE\"}",
+      "bytes": 137
+    },
+    {
+      "sender": "B",
+      "message": "{\"crc16\":4584,\"payload\":{\"cells\":\"AAACAAEAAf4AAQ==\",\"digest16\":46585,\"k\":4,\"signed_by\":[\"B\"],\"witness\":\"AA==\"},\"schema\":\"v1\",\"seq\":0,\"type\":\"CUT_CERT\"}",
+      "bytes": 151
+    },
+    {
+      "sender": "A",
+      "message": "{\"crc16\":36481,\"payload\":{\"ack_of\":\"CUT_CERT\",\"digest16\":46585},\"schema\":\"v1\",\"seq\":1,\"type\":\"ACK\"}",
+      "bytes": 99,
+      "terminal": true
+    }
+  ],
+  "diagnostics": {
+    "a_belief_blocks": 0,
+    "a_belief_free": 0,
+    "a_failed_path_digests": 0,
+    "a_failed_cut_digests": 0,
+    "b_peer_blocks_from_a": 4
+  }
+}
