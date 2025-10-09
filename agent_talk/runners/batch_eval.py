@@ -142,10 +142,9 @@ def instantiate_agents(system: str, config_a: AgentConfig, config_b: AgentConfig
     raise ValueError(f"unknown system {system}")
 
 
-def decode_path_length(payload: Dict[str, Any]) -> int:
-    encoding = payload.get("encoding")
+def decode_path_length(payload: Dict[str, Any], start: Tuple[int, int]) -> int:
+    encoding = payload.get("encoding", "RLE4_v1")
     data = base64.b64decode(payload.get("runs", ""), validate=True)
-    start = tuple(payload.get("s"))
     if encoding == "RLE4_v1":
         path = decode_path_rle4(start, data)
     elif encoding == "ABS16_v1":
@@ -156,7 +155,7 @@ def decode_path_length(payload: Dict[str, Any]) -> int:
 
 
 def decode_cut_size(payload: Dict[str, Any]) -> int:
-    encoding = payload.get("encoding")
+    encoding = payload.get("encoding", "DELTA16_v1")
     data = base64.b64decode(payload.get("cells", ""), validate=True)
     if encoding == "DELTA16_v1":
         cells = decode_cells_delta16(data)
@@ -204,7 +203,7 @@ def run(cache: Path, system: str, out: Path, config_path: Path, ablation: Option
                 if result.certificate_type == "PATH_CERT":
                     oracle_ok = verify_path_cert(result.certificate_payload, union, entry.start, entry.goal)
                     if entry.shortest is not None:
-                        path_gap = decode_path_length(result.certificate_payload) - entry.shortest
+                        path_gap = decode_path_length(result.certificate_payload, entry.start) - entry.shortest
                 elif result.certificate_type == "CUT_CERT":
                     oracle_ok = verify_cut_cert(result.certificate_payload, union, entry.start, entry.goal)
                     if entry.min_cut is not None:
@@ -226,6 +225,7 @@ def run(cache: Path, system: str, out: Path, config_path: Path, ablation: Option
             "reason": result.reason,
             "ablation": ablation,
             "transcript": result.transcript,
+            "diagnostics": result.diagnostics,
         }
         append_log(out, record)
 

@@ -2,12 +2,18 @@
 from __future__ import annotations
 
 import base64
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import Iterable, List, Optional, Sequence, Set, Tuple
 
-from agent_talk.agents.fsm_base import AgentConfig, FiniteStateAgent
+from agent_talk.agents.fsm_base import AgentConfig, FiniteStateAgent, WITNESS_MAP
 from agent_talk.core.messages import Msg
 from agent_talk.core.rle import decode_path_rle4, PathCodecError
-from agent_talk.core.coords import decode_cells_delta16, CodecError, bytes_to_coords
+from agent_talk.core.coords import (
+    decode_cells_delta16,
+    CodecError,
+    bytes_to_coords,
+    decode_witness_bits,
+    encode_witness_bits,
+)
 from agent_talk.core.crc16 import crc16_ccitt
 from agent_talk.env.grid import neighbors
 
@@ -21,6 +27,7 @@ class AgentB(FiniteStateAgent):
         super().__init__(config)
         self.last_path_digest: Optional[int] = None
         self.last_cut_digest: Optional[int] = None
+        self.peer_blocks_from_a: Set[Coordinate] = set()
 
     def step(self, incoming: Optional[Msg]) -> Msg:
         if incoming is None:
@@ -39,14 +46,25 @@ class AgentB(FiniteStateAgent):
             path = self._decode_path(payload)
         except ValueError as exc:
             return self.make_message("NACK", {"nack_of": "PATH_PROPOSE", "reason": "FORMAT", "detail": str(exc)})
-        conflicts = [list(cell) for cell in path if self.grid.is_blocked(cell)]
-        if conflicts:
+        blocked_bits = [1 if self.grid.is_blocked(cell) else 0 for cell in path]
+        if any(blocked_bits):
+            from agent_talk.core.coords import encode_witness_bits
+            mask = encode_witness_bits(blocked_bits)
+            import base64
             return self.make_message(
                 "NACK",
-                {"nack_of": "PATH_PROPOSE", "reason": "BLOCKED", "conflicts": conflicts},
+                {"nack_of": "PATH_PROPOSE", "reason": "BLOCKED", "mask": base64.b64encode(mask).decode("ascii")},
             )
+        # Fast-path: can certify now
         self.last_path_digest = digest
-        return self.make_message("ACK", {"ack_of": "PATH_PROPOSE", "digest16": digest})
+        return self.make_message(
+            "PATH_CERT",
+            {
+                "runs": payload.get("runs"),
+                "digest16": digest,
+                "signed_by": ["B"],
+            },
+        )
 
     def _handle_path_cert(self, message: Msg) -> Msg:
         payload = message.payload
@@ -59,33 +77,41 @@ class AgentB(FiniteStateAgent):
             path = self._decode_path(payload)
         except ValueError as exc:
             return self.make_message("NACK", {"nack_of": "PATH_CERT", "reason": "FORMAT", "detail": str(exc)})
-        blocked = [list(cell) for cell in path if self.grid.is_blocked(cell)]
-        if blocked:
-            return self.make_message(
-                "NACK", {"nack_of": "PATH_CERT", "reason": "BLOCKED", "conflicts": blocked}
-            )
+        if any(self.grid.is_blocked(cell) for cell in path):
+            return self.make_message("NACK", {"nack_of": "PATH_CERT", "reason": "INVALID"})
         return self.make_message("ACK", {"ack_of": "PATH_CERT", "digest16": digest})
 
     def _handle_cut_propose(self, message: Msg) -> Msg:
         payload = message.payload
         digest = int(payload.get("digest16"))
         try:
-            cells = self._decode_cut(payload)
+            cells, witnesses = self._decode_cut(payload)
         except ValueError as exc:
             return self.make_message("NACK", {"nack_of": "CUT_PROPOSE", "reason": "FORMAT", "detail": str(exc)})
-        conflicts = [list(cell) for cell in cells if not self.grid.is_blocked(cell)]
+        conflicts = []
+        for cell, witness in zip(cells, witnesses):
+            if witness == WITNESS_MAP["A"]:
+                self.peer_blocks_from_a.add(cell)
+            blocked_local = self.grid.is_blocked(cell)
+            if not blocked_local and witness != WITNESS_MAP["A"]:
+                conflicts.append(list(cell))
         if conflicts:
-            return self.make_message(
-                "NACK",
-                {"nack_of": "CUT_PROPOSE", "reason": "BLOCKED", "conflicts": conflicts},
-            )
+            conflicts = conflicts[:8]
+            return self.make_message("NACK", {"nack_of": "CUT_PROPOSE", "reason": "BLOCKED", "conflicts": conflicts})
         if self._connected_without_cut(cells):
-            return self.make_message(
-                "NACK",
-                {"nack_of": "CUT_PROPOSE", "reason": "INVALID"},
-            )
+            return self.make_message("NACK", {"nack_of": "CUT_PROPOSE", "reason": "INVALID"})
+        # Fast-path: issue certificate immediately
         self.last_cut_digest = digest
-        return self.make_message("ACK", {"ack_of": "CUT_PROPOSE", "digest16": digest})
+        return self.make_message(
+            "CUT_CERT",
+            {
+                "k": len(cells),
+                "cells": payload.get("cells"),
+                "digest16": digest,
+                "witness": payload.get("witness", ""),
+                "signed_by": ["B"],
+            },
+        )
 
     def _handle_cut_cert(self, message: Msg) -> Msg:
         payload = message.payload
@@ -95,14 +121,35 @@ class AgentB(FiniteStateAgent):
                 "NACK", {"nack_of": "CUT_CERT", "reason": "INVALID", "detail": "digest mismatch"}
             )
         try:
-            cells = self._decode_cut(payload)
+            cells, witnesses = self._decode_cut(payload)
         except ValueError as exc:
             return self.make_message("NACK", {"nack_of": "CUT_CERT", "reason": "FORMAT", "detail": str(exc)})
-        if any(not self.grid.is_blocked(cell) for cell in cells) or self._connected_without_cut(cells):
-            return self.make_message(
-                "NACK", {"nack_of": "CUT_CERT", "reason": "INVALID"}
-            )
+        invalid = False
+        for cell, witness in zip(cells, witnesses):
+            if witness == WITNESS_MAP["A"]:
+                self.peer_blocks_from_a.add(cell)
+            if not self.grid.is_blocked(cell) and witness != WITNESS_MAP["A"]:
+                invalid = True
+                break
+        if invalid or self._connected_without_cut(cells):
+            return self.make_message("NACK", {"nack_of": "CUT_CERT", "reason": "INVALID"})
         return self.make_message("ACK", {"ack_of": "CUT_CERT", "digest16": digest})
+
+    def _handle_probe(self, message: Msg) -> Msg:
+        payload = message.payload
+        if payload.get("what") == "CELLS":
+            cells_raw = payload.get("cells", [])
+            cells = [tuple(map(int, cell)) for cell in cells_raw if len(cell) == 2]
+            bits = [1 if self.grid.is_blocked(cell) else 0 for cell in cells]
+            bits_bytes = encode_witness_bits(bits)
+            return self.make_message(
+                "PROBE_REPLY",
+                {
+                    "cells": [list(cell) for cell in cells],
+                    "blocked": base64.b64encode(bits_bytes).decode("ascii"),
+                },
+            )
+        return self.make_message("NACK", {"nack_of": "PROBE", "reason": "FORMAT"})
 
     def _handle_done(self, message: Msg) -> Msg:
         return self.make_message("DONE", {})
@@ -116,7 +163,7 @@ class AgentB(FiniteStateAgent):
     # Utilities ------------------------------------------------------------
 
     def _decode_path(self, payload: dict) -> List[Coordinate]:
-        encoding = payload.get("encoding")
+        encoding = payload.get("encoding", "RLE4_v1")
         runs_b64 = payload.get("runs", "")
         try:
             runs = base64.b64decode(runs_b64, validate=True)
@@ -124,8 +171,9 @@ class AgentB(FiniteStateAgent):
             raise ValueError(f"invalid base64 runs: {exc}") from exc
         if crc16_ccitt(runs) != int(payload.get("digest16")):
             raise ValueError("digest mismatch")
-        start = tuple(payload.get("s"))  # type: ignore[assignment]
-        if start != self.config.start or tuple(payload.get("t")) != self.config.goal:  # type: ignore[arg-type]
+        start = tuple(payload.get("s", self.config.start))  # type: ignore[assignment]
+        end = tuple(payload.get("t", self.config.goal))
+        if start != self.config.start or end != self.config.goal:  # type: ignore[arg-type]
             raise ValueError("endpoint mismatch")
         if encoding == "RLE4_v1":
             try:
@@ -144,8 +192,8 @@ class AgentB(FiniteStateAgent):
             raise ValueError("unsupported encoding")
         return path
 
-    def _decode_cut(self, payload: dict) -> List[Coordinate]:
-        encoding = payload.get("encoding")
+    def _decode_cut(self, payload: dict) -> Tuple[List[Coordinate], List[int]]:
+        encoding = payload.get("encoding", "DELTA16_v1")
         cells_b64 = payload.get("cells", "")
         try:
             cells_bytes = base64.b64decode(cells_b64, validate=True)
@@ -164,7 +212,15 @@ class AgentB(FiniteStateAgent):
             raise ValueError("unsupported encoding")
         if len(cells) != int(payload.get("k")):
             raise ValueError("length mismatch")
-        return cells
+        witness_b64 = payload.get("witness")
+        if witness_b64 is None:
+            raise ValueError("missing witness bits")
+        try:
+            witness_bytes = base64.b64decode(witness_b64, validate=True)
+        except (ValueError, base64.binascii.Error) as exc:  # type: ignore[attr-defined]
+            raise ValueError(f"invalid base64 witness: {exc}") from exc
+        witnesses = decode_witness_bits(witness_bytes, len(cells))
+        return cells, witnesses
 
     def _connected_without_cut(self, cut_cells: Sequence[Coordinate]) -> bool:
         cut = set(cut_cells)

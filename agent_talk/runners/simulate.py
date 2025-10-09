@@ -19,6 +19,7 @@ class SimulationResult:
     certificate_type: Optional[str]
     certificate_payload: Optional[dict]
     reason: Optional[str]
+    diagnostics: Dict[str, object]
 
     def to_dict(self) -> Dict[str, object]:
         return asdict(self)
@@ -67,6 +68,12 @@ def simulate_conversation(agent_a: AgentA, agent_b: AgentB, limits: Optional[Con
             certificate_type = message.type
             certificate_payload = message.payload
 
+        # Treat ACK on a certificate as terminal (ACK-terminates)
+        if message.type == "ACK" and message.payload.get("ack_of") in {"PATH_CERT", "CUT_CERT"}:
+            outcome = "DONE"
+            transcript[-1]["terminal"] = True
+            break
+
         if message.type == "DONE":
             outcome = "DONE"
             break
@@ -79,6 +86,14 @@ def simulate_conversation(agent_a: AgentA, agent_b: AgentB, limits: Optional[Con
             sender = "A"
 
     reason = None if outcome == "DONE" else outcome
+    diagnostics: Dict[str, object] = {}
+    if hasattr(agent_a, "belief_peer_blocks"):
+        diagnostics["a_belief_blocks"] = len(getattr(agent_a, "belief_peer_blocks", []))
+        diagnostics["a_belief_free"] = len(getattr(agent_a, "belief_peer_free", []))
+        diagnostics["a_failed_path_digests"] = len(getattr(agent_a, "failed_path_digests", []))
+        diagnostics["a_failed_cut_digests"] = len(getattr(agent_a, "failed_cut_digests", []))
+    if hasattr(agent_b, "peer_blocks_from_a"):
+        diagnostics["b_peer_blocks_from_a"] = len(getattr(agent_b, "peer_blocks_from_a", []))
     return SimulationResult(
         transcript=transcript,
         bytes_used=bytes_used,
@@ -87,4 +102,5 @@ def simulate_conversation(agent_a: AgentA, agent_b: AgentB, limits: Optional[Con
         certificate_type=certificate_type,
         certificate_payload=certificate_payload,
         reason=reason,
+        diagnostics=diagnostics,
     )

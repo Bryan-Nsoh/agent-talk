@@ -5,7 +5,7 @@ import base64
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
-from agent_talk.core.coords import decode_cells_delta16, bytes_to_coords
+from agent_talk.core.coords import decode_cells_delta16, bytes_to_coords, decode_witness_bits
 from agent_talk.core.crc16 import crc16_ccitt
 from agent_talk.core.rle import decode_path_rle4, PathCodecError
 from agent_talk.env.grid import Grid, bfs_free, neighbors
@@ -30,9 +30,11 @@ def _decode_base64(data: str) -> bytes:
 
 
 def verify_path_cert(cert: Dict, union: Grid, start: Coordinate, goal: Coordinate) -> bool:
-    encoding = cert.get("encoding")
-    if cert.get("s") != list(start) or cert.get("t") != list(goal):
-        raise OracleError("start or goal mismatch")
+    encoding = cert.get("encoding", "RLE4_v1")
+    # If s/t present, enforce match; otherwise rely on provided start/goal
+    if "s" in cert and "t" in cert:
+        if cert.get("s") != list(start) or cert.get("t") != list(goal):
+            raise OracleError("start or goal mismatch")
     runs_bytes = _decode_base64(cert.get("runs", ""))
     expected_digest = int(cert.get("digest16"))
     if crc16_ccitt(runs_bytes) != expected_digest:
@@ -63,7 +65,7 @@ def verify_path_cert(cert: Dict, union: Grid, start: Coordinate, goal: Coordinat
 
 
 def verify_cut_cert(cert: Dict, union: Grid, start: Coordinate, goal: Coordinate) -> bool:
-    encoding = cert.get("encoding")
+    encoding = cert.get("encoding", "DELTA16_v1")
     cells_bytes = _decode_base64(cert.get("cells", ""))
     expected_digest = int(cert.get("digest16"))
     if crc16_ccitt(cells_bytes) != expected_digest:
@@ -76,6 +78,12 @@ def verify_cut_cert(cert: Dict, union: Grid, start: Coordinate, goal: Coordinate
         raise OracleError("unsupported cut encoding")
     if len(cells) != int(cert.get("k")):
         raise OracleError("cut length mismatch")
+    witness_b64 = cert.get("witness")
+    if witness_b64 is not None:
+        witness_bytes = _decode_base64(witness_b64)
+        witness_bits = decode_witness_bits(witness_bytes, len(cells))
+        if len(witness_bits) != len(cells):
+            raise OracleError("witness bit length mismatch")
     cut_set = set()
     for cell in cells:
         x, y = cell

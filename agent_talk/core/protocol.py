@@ -10,6 +10,8 @@ MessageType = Literal[
     "HELLO",
     "SCHEMA",
     "PROBE",
+    "PROBE_REPLY",
+    "YIELD",
     "PATH_PROPOSE",
     "PATH_CERT",
     "CUT_PROPOSE",

@@ -90,3 +90,35 @@ def bytes_to_coords(data: bytes) -> List[Coordinate]:
         x, y = struct.unpack_from("<HH", view, offset)
         result.append((int(x), int(y)))
     return result
+
+
+def encode_witness_bits(bits: Sequence[int]) -> bytes:
+    """Pack a sequence of 0/1 witness bits into bytes (LSB-first)."""
+    out = bytearray()
+    byte = 0
+    count = 0
+    for bit in bits:
+        if bit not in (0, 1):
+            raise CodecError("witness bits must be 0 or 1")
+        byte |= (bit & 1) << count
+        count += 1
+        if count == 8:
+            out.append(byte)
+            byte = 0
+            count = 0
+    if count:
+        out.append(byte)
+    return bytes(out)
+
+
+def decode_witness_bits(data: bytes, length: int) -> List[int]:
+    """Unpack witness bits into a list of length `length`."""
+    bits: List[int] = []
+    for byte in data:
+        for i in range(8):
+            bits.append((byte >> i) & 1)
+            if len(bits) == length:
+                return bits
+    if len(bits) < length:
+        raise CodecError("witness bit payload too short")
+    return bits[:length]

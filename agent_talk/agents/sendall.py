@@ -134,12 +134,14 @@ class SendAllAgentB(FiniteStateAgent):
             }
             return self.make_message("PATH_CERT", payload)
         cut = min_vertex_cut_potential(union_grid, self.config.start, self.config.goal)
-        encoded, digest = self.encode_cut(cut)
+        peer_blocks = { (idx % self.config.width, idx // self.config.width) for idx in self.received_indices }
+        encoded, digest, witness = self.encode_cut(cut, peer_blocks)
         payload = {
             "encoding": self.config.cut_encoding,
             "k": len(cut),
             "cells": encoded,
             "digest16": digest,
+            "witness": witness,
             "signed_by": ["B"],
         }
         return self.make_message("CUT_CERT", payload)

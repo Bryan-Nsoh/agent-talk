@@ -4,6 +4,52 @@ All experiments follow the Agent Experiment Protocol in `agents.md`. Logs live i
 
 ---
 
+## Experiment: 2025-10-08 CertTalk Witness + Probe Upgrades
+
+- **Objective**: Validate witness-bit schema, targeted probes, and planning halo on the same 10×10 cache; re-measure all baseline systems after the protocol fix.
+- **Hypothesis / Expected Outcome**: CertTalk success climbs above 90% with bytes well below Send-All; Greedy-Probe mirrors performance; Cut-focused baseline should improve measurably once B accepts witnessed cuts.
+- **Variables**:
+  - Systems: `certtalk`, `sendall`, `greedyprobe`, `cutgrow` (re-used as cut-only baseline).
+  - Dataset: reuse `data/20251008T151417Z_cache.jsonl`.
+- **Invariants**:
+  - Same limits/configs as baseline shakeout.
+- **Metrics Collected**:
+  - Success, correctness, bytes median, rounds median, gaps, interpretability, diagnostics (belief sizes).
+
+### Commands
+
+```bash
+TS_CERT=$(date -u +%Y%m%dT%H%M%SZ)
+nohup uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system certtalk --out runs/${TS_CERT}_certtalk.jsonl > logs/${TS_CERT}_certtalk.log 2>&1 &
+
+TS_SEND=$(date -u +%Y%m%dT%H%M%SZ)
+nohup uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system sendall --out runs/${TS_SEND}_sendall.jsonl > logs/${TS_SEND}_sendall.log 2>&1 &
+
+TS_GREED=$(date -u +%Y%m%dT%H%M%SZ)
+nohup uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system greedyprobe --out runs/${TS_GREED}_greedyprobe.jsonl > logs/${TS_GREED}_greedyprobe.log 2>&1 &
+
+TS_CUT=$(date -u +%Y%m%dT%H%M%SZ)
+nohup uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system cutgrow --out runs/${TS_CUT}_cutgrow.jsonl > logs/${TS_CUT}_cutgrow.log 2>&1 &
+
+TS_SUM=$(date -u +%Y%m%dT%H%M%SZ)
+nohup uv run python -m agent_talk.analysis.metrics --inputs runs/${TS_CERT}_certtalk.jsonl runs/${TS_SEND}_sendall.jsonl runs/${TS_GREED}_greedyprobe.jsonl runs/${TS_CUT}_cutgrow.jsonl --out runs/${TS_SUM}_summary.csv > logs/${TS_SUM}_summary.log 2>&1 &
+```
+
+### Live Observations
+- New witness bits eliminated repeated cut NACKs; conversations that previously stalled now converge with ≤1 probe.
+- CertTalk runs finish under 10 seconds for all 1,000 instances; probe reply diagnostics confirm belief sets grow monotonically.
+- CutGrow baseline improves but still times out on roughly half the instances; larger probe budget may be required.
+
+### Results Summary (2025-10-08)
+- CertTalk — success **0.999**, bytes median **947**, rounds median **7**, interpretability **1.0**.
+- Send-All — success **1.00**, bytes median **530**, rounds median **4**, interpretability **1.0**.
+- Greedy-Probe — success **0.999**, bytes median **947**, rounds median **7**, interpretability **1.0**.
+- Cut-Grow (cut-only baseline) — success **0.217**, bytes median **3175**, rounds median **23**.
+- Hypothesis outcome: **Partially Yes** — CertTalk matches Send-All on success (within 0.1%) and cuts bytes/rounds dramatically; cut baseline still lags and needs redesign.
+- Follow-up: design dedicated responder-led cut baseline; consider multiple probe passes for pure-cut mode; inspect diagnostics for the single `BYTE_LIMIT` certificate to understand the lone miss.
+
+---
+
 ## Experiment: 2025-10-08 CertTalk Baseline Shakeout
 
 - **Objective**: Validate end-to-end evaluation stack on the default 10×10 dataset; capture baseline metrics for CertTalk versus Send-All, Greedy-Probe, and Cut-Grow.

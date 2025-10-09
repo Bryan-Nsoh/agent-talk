@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 
 from agent_talk.core.rle import encode_path_rle4
-from agent_talk.core.coords import encode_cells_delta16
+from agent_talk.core.coords import encode_cells_delta16, encode_witness_bits
 from agent_talk.core.crc16 import crc16_ccitt
 from agent_talk.env.grid import Grid
 from agent_talk.oracle.oracle import verify_path_cert, verify_cut_cert, union_grid
@@ -43,10 +43,12 @@ def test_verify_cut_cert():
     cells = [(1, 0), (1, 1), (1, 2)]
     encoded = encode_cells_delta16(cells)
     digest = crc16_ccitt(encoded)
+    witness = encode_witness_bits([0] * len(cells))
     payload = {
         "encoding": "DELTA16_v1",
         "k": len(cells),
         "cells": base64.b64encode(encoded).decode("ascii"),
         "digest16": digest,
+        "witness": base64.b64encode(witness).decode("ascii"),
     }
     assert verify_cut_cert(payload, union, start, goal)
