@@ -1,11 +1,11 @@
-Last updated: 2025-10-09 (UTC)
+Last updated: 2025-10-09T16:55Z (UTC)
 
 ## Summary (raw)
 ```text
 system,split,count,success_rate,correctness,bytes_median,rounds_median,path_gap_median,cut_gap_median,interpretability
-certtalk,all,1000,1.0,1.0,653.5,7.0,0.0,0.0,1.0
+certtalk,all,1000,1.0,1.0,468.5,5.0,0.0,0.0,1.0
 sendall,all,1000,1.0,1.0,466.0,3.0,0.0,0.0,1.0
-greedyprobe,all,1000,1.0,1.0,872.5,7.0,0.0,0.0,1.0
+greedyprobe,all,1000,1.0,1.0,635.5,5.0,0.0,0.0,1.0
 respondermincut,all,1000,0.205,0.205,667.0,6.0,,0,0.205
 ```
 
@@ -20,11 +20,15 @@ respondermincut,all,1000,0.205,0.205,667.0,6.0,,0,0.205
 
 ## Representative transcripts/logs (raw)
 ```text
-{"system":"certtalk","split":"all","seed":123,"outcome":"DONE","bytes":461,"rounds":5,"certificate_type":"CUT_CERT","oracle_accepted":true,"path_gap":null,"cut_gap":0,"reason":null,"ablation":null,"transcript":[{"sender":"A","message":"{\"c\":64959,\"p\":{\"cut_enc\":\"DELTA16_v1\",\"path_enc\":\"RLE4_v1\",\"s\":[0,0],\"size\":[10,10],\"t\":[9,9]},\"q\":0,\"s\":\"v1\",\"t\":\"SCHEMA\"}","bytes":124},{"sender":"B","message":"{\"c\":13054,\"p\":{\"a\":\"SCHEMA\",\"d\":0},\"q\":0,\"s\":\"v1\",\"t\":\"ACK\"}","bytes":61},{"sender":"A","message":"{\"c\":10141,\"p\":{\"cs\":\"AAACAAEAAf4AAQ==\",\"d\":46585,\"k\":4,\"w\":\"AA==\"},\"q\":1,\"s\":\"v1\",\"t\":\"CUT_PROPOSE\"}","bytes":101},{"sender":"B","message":"{\"c\":4584,\"p\":{\"cs\":\"AAACAAEAAf4AAQ==\",\"d\":46585,\"k\":4,\"sb\":[\"B\"],\"w\":\"AA==\"},\"q\":1,\"s\":\"v1\",\"t\":\"CUT_CERT\"}","bytes":108},{"sender":"A","message":"{\"c\":36481,\"p\":{\"a\":\"CUT_CERT\",\"d\":46585},\"q\":2,\"s\":\"v1\",\"t\":\"ACK\"}","bytes":67,"terminal":true}],"diagnostics":{"a_belief_blocks":0,"a_belief_free":0,"a_failed_path_digests":0,"a_failed_cut_digests":0,"b_peer_blocks_from_a":4}}
+{"system":"certtalk","split":"all","seed":123,"outcome":"DONE","bytes":276,"rounds":3,"certificate_type":"CUT_CERT","oracle_accepted":true,"path_gap":null,"cut_gap":0,"reason":null,"ablation":null,"transcript":[{"sender":"A","message":"{\"c\":10141,\"p\":{\"cs\":\"AAACAAEAAf4AAQ==\",\"d\":46585,\"k\":4,\"w\":\"AA==\"},\"q\":0,\"s\":\"v1\",\"t\":\"CUT_PROPOSE\"}","bytes":101},{"sender":"B","message":"{\"c\":4584,\"p\":{\"cs\":\"AAACAAEAAf4AAQ==\",\"d\":46585,\"k\":4,\"sb\":[\"B\"],\"w\":\"AA==\"},\"q\":0,\"s\":\"v1\",\"t\":\"CUT_CERT\"}","bytes":108},{"sender":"A","message":"{\"c\":36481,\"p\":{\"a\":\"CUT_CERT\",\"d\":46585},\"q\":1,\"s\":\"v1\",\"t\":\"ACK\"}","bytes":67,"terminal":true}],"diagnostics":{"a_belief_blocks":0,"a_belief_free":0,"a_failed_path_digests":0,"a_failed_cut_digests":0,"b_peer_blocks_from_a":4}}
 ```
 
 ```text
-{"system":"certtalk","split":"all","seed":129,"outcome":"DONE","bytes":596,"rounds":7,"certificate_type":"PATH_CERT","oracle_accepted":true,"path_gap":0,"cut_gap":null,"reason":null,"ablation":null,"transcript":[{"sender":"A","message":"{\"c\":64959,\"p\":{\"cut_enc\":\"DELTA16_v1\",\"path_enc\":\"RLE4_v1\",\"s\":[0,0],\"size\":[10,10],\"t\":[9,9]},\"q\":0,\"s\":\"v1\",\"t\":\"SCHEMA\"}","bytes":124},{"sender":"B","message":"{\"c\":13054,\"p\":{\"a\":\"SCHEMA\",\"d\":0},\"q\":0,\"s\":\"v1\",\"t\":\"ACK\"}","bytes":61},{"sender":"A","message":"{\"c\":60685,\"p\":{\"d\":13360,\"r\":\"gUGBQYFHhg==\"},\"q\":1,\"s\":\"v1\",\"t\":\"PATH_PROPOSE\"}","bytes":80},{"sender":"B","message":"{\"c\":47785,\"p\":{\"mask\":\"QBwA\",\"n\":\"PATH_PROPOSE\",\"reason\":\"BLOCKED\"},\"q\":1,\"s\":\"v1\",\"t\":\"NACK\"}","bytes":95},{"sender":"A","message":"{\"c\":18177,\"p\":{\"d\":23737,\"r\":\"gUGBQYNEgUOD\"},\"q\":2,\"s\":\"v1\",\"t\":\"PATH_PROPOSE\"}","bytes":80},{"sender":"B","message":"{\"c\":63603,\"p\":{\"d\":23737,\"r\":\"gUGBQYNEgUOD\",\"sb\":[\"B\"]},\"q\":2,\"s\":\"v1\",\"t\":\"PATH_CERT\"}","bytes":88},{"sender":"A","message":"{\"c\":24041,\"p\":{\"a\":\"PATH_CERT\",\"d\":23737},\"q\":3,\"s\":\"v1\",\"t\":\"ACK\"}","bytes":68,"terminal":true}],"diagnostics":{"a_belief_blocks":4,"a_belief_free":15,"a_failed_path_digests":1,"a_failed_cut_digests":0,"b_peer_blocks_from_a":0}}
+{"system":"certtalk","split":"all","seed":126,"outcome":"DONE","bytes":1013,"rounds":11,"certificate_type":"CUT_CERT","oracle_accepted":true,"path_gap":null,"cut_gap":0,"reason":null,"ablation":null,"transcript":[{"sender":"A","message":"{\"c\":19235,\"p\":{\"d\":55788,\"r\":\"RIFDgUGGQYE=\"},\"q\":0,\"s\":\"v1\",\"t\":\"PATH_PROPOSE\"}","bytes":80},{"sender":"B","message":"{\"c\":28346,\"p\":{\"mask\":\"GBAA\",\"n\":\"PATH_PROPOSE\",\"reason\":\"BLOCKED\"},\"q\":0,\"s\":\"v1\",\"t\":\"NACK\"}","bytes":95},{"sender":"A","message":"{\"c\":22500,\"p\":{\"d\":7265,\"r\":\"QoFFhEGDQYE=\"},\"q\":1,\"s\":\"v1\",\"t\":\"PATH_PROPOSE\"}","bytes":79},{"sender":"B","message":"{\"c\":39901,\"p\":{\"mask\":\"AAQA\",\"n\":\"PATH_PROPOSE\",\"reason\":\"BLOCKED\"},\"q\":1,\"s\":\"v1\",\"t\":\"NACK\"}","bytes":95},{"sender":"A","message":"{\"c\":59809,\"p\":{\"d\":18065,\"r\":\"QoRFgUGDQYE=\"},\"q\":2,\"s\":\"v1\",\"t\":\"PATH_PROPOSE\"}","bytes":80},{"sender":"B","message":"{\"c\":12669,\"p\":{\"mask\":\"UAEA\",\"n\":\"PATH_PROPOSE\",\"reason\":\"BLOCKED\"},\"q\":2,\"s\":\"v1\",\"t\":\"NACK\"}","bytes":95},{"sender":"A","message":"{\"c\":57787,\"p\":{\"d\":9624,\"r\":\"g0GCQYFBgUWBQYE=\"},\"q\":3,\"s\":\"v1\",\"t\":\"PATH_PROPOSE\"}","bytes":83},{"sender":"B","message":"{\"c\":51842,\"p\":{\"mask\":\"VgIA\",\"n\":\"PATH_PROPOSE\",\"reason\":\"BLOCKED\"},\"q\":3,\"s\":\"v1\",\"t\":\"NACK\"}","bytes":95},{"sender":"A","message":"{\"c\":40618,\"p\":{\"cs\":\"AAABAAEBAQABAQH/AQEB/wEBAQEB/w==\",\"d\":33788,\"k\":10,\"w\":\"hQE=\"},\"q\":4,\"s\":\"v1\",\"t\":\"CUT_PROPOSE\"}","bytes":118},{"sender":"B","message":"{\"c\":65004,\"p\":{\"cs\":\"AAABAAEBAQABAQH/AQEB/wEBAQEB/w==\",\"d\":33788,\"k\":10,\"sb\":[\"B\"],\"w\":\"hQE=\"},\"q\":4,\"s\":\"v1\",\"t\":\"CUT_CERT\"}","bytes":126},{"sender":"A","message":"{\"c\":65187,\"p\":{\"a\":\"CUT_CERT\",\"d\":33788},\"q\":5,\"s\":\"v1\",\"t\":\"ACK\"}","bytes":67,"terminal":true}],"diagnostics":{"a_belief_blocks":12,"a_belief_free":33,"a_failed_path_digests":4,"a_failed_cut_digests":0,"b_peer_blocks_from_a":6}}
+```
+
+```text
+{"system":"respondermincut","split":"all","seed":131,"outcome":"DONE","bytes":719,"rounds":6,"certificate_type":"CUT_CERT","oracle_accepted":true,"path_gap":null,"cut_gap":1,"reason":null,"ablation":null,"transcript":[{"sender":"A","message":"{\"crc16\":64959,\"payload\":{\"cut_enc\":\"DELTA16_v1\",\"path_enc\":\"RLE4_v1\",\"s\":[0,0],\"size\":[10,10],\"t\":[9,9]},\"schema\":\"v1\",\"seq\":0,\"type\":\"SCHEMA\"}","bytes":144},{"sender":"B","message":"{\"crc16\":24093,\"payload\":{\"cells\":\"CQAEAP8B/gEBAP4BAQEBAQ==\",\"digest16\":48350,\"k\":7,\"signed_by\":[\"B\"],\"witness\":\"fw==\"},\"schema\":\"v1\",\"seq\":0,\"type\":\"CUT_CERT\"}","bytes":160},{"sender":"A","message":"{\"crc16\":11739,\"payload\":{\"conflicts\":[[9,4],[8,5],[6,6],[7,6],[5,7],[6,8],[7,9]],\"nack_of\":\"CUT_PROPOSE\",\"reason\":\"BLOCKED\"},\"schema\":\"v1\",\"seq\":1,\"type\":\"NACK\"}","bytes":162},{"sender":"B","message":"{\"crc16\":8151,\"payload\":{\"cells\":[[9,4],[8,5],[6,6],[7,6],[5,7],[6,8]],\"what\":\"CELLS\"},\"schema\":\"v1\",\"seq\":1,\"type\":\"PROBE\"}","bytes":124},{"sender":"A","message":"{\"crc16\":26486,\"payload\":{},\"schema\":\"v1\",\"seq\":2,\"type\":\"HELLO\"}","bytes":65},{"sender":"B","message":"{\"crc16\":22322,\"payload\":{},\"schema\":\"v1\",\"seq\":2,\"type\":\"DONE\"}","bytes":64}],"diagnostics":{}}
 ```
 
 
@@ -32,11 +36,11 @@ respondermincut,all,1000,0.205,0.205,667.0,6.0,,0,0.205
 ```
 uv venv && source .venv/bin/activate && uv pip install -e .[dev]
 uv run python -m agent_talk.env.generator --out data/20251008T151417Z_cache.jsonl --n 1000 --size 10 --seed 123
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system certtalk --out runs/20251009T141144Z_certtalk.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system sendall --out runs/20251009T141244Z_sendall.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system greedyprobe --out runs/20251009T141246Z_greedyprobe.jsonl
-uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system respondermincut --out runs/20251009T141248Z_respondmincut.jsonl
-uv run python -m agent_talk.analysis.metrics --inputs runs/20251009T141144Z_certtalk.jsonl runs/20251009T141244Z_sendall.jsonl runs/20251009T141246Z_greedyprobe.jsonl runs/20251009T141248Z_respondmincut.jsonl --out runs/20251009T141250Z_summary.csv
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system certtalk --out runs/20251009T165448Z_certtalk.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system sendall --out runs/20251009T165501Z_sendall.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system greedyprobe --out runs/20251009T165507Z_greedyprobe.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system respondermincut --out runs/20251009T165521Z_respondmincut.jsonl
+uv run python -m agent_talk.analysis.metrics --inputs runs/20251009T165448Z_certtalk.jsonl runs/20251009T165501Z_sendall.jsonl runs/20251009T165507Z_greedyprobe.jsonl runs/20251009T165521Z_respondmincut.jsonl --out runs/20251009T165537Z_summary.csv
 ```
 
 ## Code (verbatim, raw)
@@ -1020,7 +1024,7 @@ class AgentA(FiniteStateAgent):
 
     def __init__(self, config: AgentConfig) -> None:
         super().__init__(config)
-        self.state = "SEND_SCHEMA"
+        self.state = "PLAN_PATH" if self.config.allow_path else "PLAN_CUT"
         self.belief_peer_blocks: Set[Coordinate] = set()
         self.belief_peer_free: Set[Coordinate] = set()
         self.path_attempts = 0
@@ -1173,18 +1177,6 @@ class AgentA(FiniteStateAgent):
 
             if self.state == "AWAIT_PROBE_REPLY":
                 raise RuntimeError("Agent A awaiting probe reply")
-
-            if self.state == "SEND_SCHEMA":
-                payload = {
-                    "s": list(self.config.start),
-                    "t": list(self.config.goal),
-                    "size": [self.config.width, self.config.height],
-                    "path_enc": "RLE4_v1",
-                    "cut_enc": "DELTA16_v1",
-                }
-                # After schema, continue as before
-                self.state = "PLAN_PATH" if self.config.allow_path else "PLAN_CUT"
-                return self.make_message("SCHEMA", payload)
 
             if self.state == "SEND_YIELD":
                 self.state = "AWAIT_YIELD_ACK"
@@ -2177,5 +2169,4 @@ def main(argv: Optional[Iterable[str]] = None) -> None:
 if __name__ == "__main__":
     main()
 ```
-
 

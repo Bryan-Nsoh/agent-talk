@@ -75,7 +75,7 @@ Last updated: <UTC_TIMESTAMP>
 - Guidance: <one sentence question>
 ```
 
-## Expander (tools/expand_includes.py)
+## Expander (scripts/expand_includes.py)
 Drop‑in script to resolve `<include …/>` and write a path‑free EXPERT_HANDOFF.md.
 
 ```python
@@ -157,7 +157,7 @@ if __name__ == '__main__':
 
 ## How To Use
 1) Author `EXPERT_HANDOFF.template.md` with include tags
-2) Run: `uv run python tools/expand_includes.py --in EXPERT_HANDOFF.template.md --out EXPERT_HANDOFF.md`
+2) Run: `uv run python scripts/expand_includes.py --in EXPERT_HANDOFF.template.md --out EXPERT_HANDOFF.md`
 3) Share only `EXPERT_HANDOFF.md` (path‑free, self‑contained)
 
 ## Reviewer Prompts (General)
