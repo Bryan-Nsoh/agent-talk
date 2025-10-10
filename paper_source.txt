@@ -1,0 +1,294 @@
+# CertTalk Paper Source (plain text)
+Generated: 2025-10-10T16:08:58Z
+
+This file replaces the old TeX dump at repo root. It points to the canonical LaTeX (in cert-talk-paper) and embeds the exact code that generates all figures/diagrams.
+
+## How To Reproduce Figures
+- Generate statistical figures (bytes/rounds/mix):
+  $ ./scripts/build_figures.sh
+- Generate sequence diagrams (Mermaid -> PDF):
+  $ ./scripts/build_diagrams.sh   # requires: npm i -g @mermaid-js/mermaid-cli
+
+Artifacts are written under cert-talk-paper/figs. The PDF is built via:
+  $ (cd cert-talk-paper && latexmk -pdf -silent main.tex)
+
+## Certificate Examples (verbatim JSON)
+```json
+{"t":"PATH_CERT",
+ "p":{"runs":"QoVBgkKCRA==",
+      "digest16":22270,
+      "signed_by":["B"]},
+ "s":"v1","q":0,"c":49459}
+
+```
+
+```json
+{"t":"CUT_CERT",
+ "p":{"cells":"AAACAAEAAf4AAQ==",
+      "k":4,
+      "digest16":46585,
+      "witness":"AA==",
+      "signed_by":["B"]},
+ "s":"v1","q":0,"c":4584}
+
+```
+
+## Python Code That Generates Statistical Figures
+```python
+"""Seaborn plots for bytes/rounds and message-mix figures.
+
+Usage:
+  uv run python -m agent_talk.analysis.plots_sns
+This writes PNGs under cert-talk-paper/figs.
+"""
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+from typing import Iterable, Iterator
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+def iter_jsonl_records(path: Path) -> Iterator[dict]:
+    """Yield dicts from a JSONL file. Be resilient to prefix like "[1/1000] {..}"."""
+    patt = re.compile(r"\{.*\}$")
+    with path.open("r", encoding="utf-8") as fh:
+        for line in fh:
+            s = line.strip()
+            if not s:
+                continue
+            m = patt.search(s)
+            if m:
+                s = m.group(0)
+            try:
+                yield json.loads(s)
+            except json.JSONDecodeError:
+                continue
+
+
+def load_runs(runs_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    rows, msg_rows = [], []
+    for jf in runs_dir.glob("*.jsonl"):
+        system = jf.stem.split("_", 1)[0]
+        for rec in iter_jsonl_records(jf):
+            seed = rec.get("seed")
+            outcome = rec.get("outcome")
+            rounds = rec.get("rounds")
+            totalB = rec.get("bytes")
+            ctype = rec.get("certificate_type")
+            accepted = rec.get("oracle_accepted")
+            trans = rec.get("transcript", [])
+            if totalB is None and trans:
+                totalB = sum(m.get("bytes", 0) for m in trans)
+            rows.append({
+                "system": system,
+                "seed": seed,
+                "rounds": rounds,
+                "total_bytes": totalB,
+                "certificate_type": ctype,
+                "accepted": bool(accepted),
+                "n_messages": len(trans),
+                "outcome": outcome,
+            })
+            for i, m in enumerate(trans):
+                try:
+                    inner = json.loads(m.get("message", "{}"))
+                except Exception:
+                    inner = {}
+                msg_rows.append({
+                    "system": system,
+                    "seed": seed,
+                    "i": i,
+                    "bytes": m.get("bytes", 0),
+                    "sender": m.get("sender"),
+                    "type": inner.get("t"),
+                })
+    df_runs = pd.DataFrame(rows).dropna(subset=["total_bytes", "rounds"])  # ensure numeric
+    df_msgs = pd.DataFrame(msg_rows)
+    return df_runs, df_msgs
+
+
+def style_paper():
+    sns.set_theme(style="whitegrid", context="paper")
+    plt.rcParams.update({
+        "figure.dpi": 150,
+        "savefig.dpi": 300,
+        "axes.titlelocation": "left",
+        "axes.titleweight": "bold",
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+    })
+
+
+def ensure_outdir() -> Path:
+    out = Path("cert-talk-paper/figs")
+    out.mkdir(parents=True, exist_ok=True)
+    return out
+
+
+def plot_bytes(df: pd.DataFrame, outdir: Path, order: list[str]):
+    plt.figure()
+    ax = sns.boxenplot(data=df, x="system", y="total_bytes", order=order, showfliers=False)
+    sns.stripplot(data=df, x="system", y="total_bytes", order=order, alpha=0.25, size=2, ax=ax)
+    ax.set(xlabel="", ylabel="Bytes per transcript")
+    plt.title("Communication cost", loc="left")
+    plt.tight_layout()
+    plt.savefig(outdir / "bytes_by_system.pdf")
+    plt.close()
+
+
+def plot_rounds(df: pd.DataFrame, outdir: Path, order: list[str]):
+    plt.figure()
+    ax = sns.boxenplot(data=df, x="system", y="rounds", order=order, showfliers=False)
+    sns.stripplot(data=df, x="system", y="rounds", order=order, alpha=0.25, size=2, ax=ax)
+    ax.set(xlabel="", ylabel="Messages (rounds)")
+    plt.title("Dialogue length", loc="left")
+    plt.tight_layout()
+    plt.savefig(outdir / "rounds_by_system.pdf")
+    plt.close()
+
+
+def plot_scatter(df: pd.DataFrame, outdir: Path):
+    plt.figure()
+    ax = sns.scatterplot(
+        data=df, x="rounds", y="total_bytes", hue="system",
+        alpha=0.5, s=12, edgecolor="none"
+    )
+    ax.set(xlabel="Messages (rounds)", ylabel="Bytes per transcript")
+    plt.title("Bytes vs. rounds", loc="left")
+    plt.tight_layout()
+    plt.savefig(outdir / "bytes_vs_rounds.pdf")
+    plt.close()
+
+
+def plot_byte_mix(dm: pd.DataFrame, outdir: Path, order: list[str]):
+    by_type = (
+        dm.groupby(["system", "type"], observed=True)["bytes"].sum().reset_index()
+    )
+    tot = by_type.groupby("system", observed=True)["bytes"].transform("sum")
+    by_type["pct"] = 100 * by_type["bytes"] / tot
+    top_types = by_type.groupby("type")["bytes"].sum().nlargest(6).index
+    by_type["type2"] = by_type["type"].where(by_type["type"].isin(top_types), "OTHER")
+    wide = (
+        by_type.groupby(["system", "type2"], observed=True)["pct"].sum()
+        .reset_index().pivot(index="system", columns="type2", values="pct").fillna(0)
+        .reindex(order)
+    )
+    plt.figure()
+    bottom = None
+    for col in wide.columns:
+        plt.bar(wide.index, wide[col], label=col, bottom=bottom)
+        bottom = (wide[col] if bottom is None else bottom + wide[col])
+    plt.ylabel("Share of bytes by message type (%)")
+    plt.xticks(range(len(wide.index)), wide.index)
+    plt.title("What the bytes are spent on", loc="left")
+    plt.legend(ncol=3, fontsize=8, frameon=False)
+    plt.tight_layout()
+    plt.savefig(outdir / "byte_mix_stacked.pdf")
+    plt.close()
+
+
+def main():
+    style_paper()
+    out = ensure_outdir()
+    runs_dir = Path("runs")
+    df, dm = load_runs(runs_dir)
+    order = ["sendall", "certtalk", "greedyprobe", "respondermincut"]
+    df["system"] = pd.Categorical(df["system"], categories=order, ordered=True)
+    dm["system"] = pd.Categorical(dm["system"], categories=order, ordered=True)
+
+    plot_bytes(df, out, order)
+    plot_rounds(df, out, order)
+    plot_scatter(df, out)
+    if not dm.empty:
+        plot_byte_mix(dm, out, order)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Mermaid Sources For Sequence Diagrams
+### seq_certtalk.mmd
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Robot A (initiator)
+    participant B as Robot B (responder)
+    Note over A: Start with private map A
+    A->>B: PATH_PROPOSE [PROOF] (~70-120 B)
+    Note over B: Validate against B hazards
+    alt Path valid
+        B-->>A: PATH_CERT [PROOF + signed_by] (~70-120 B)
+        A->>B: ACK (digest echo) (~16-30 B)
+        Note over A,B: Fast path terminates (3 messages)
+    else Path blocked
+        B-->>A: NACK [CONFLICTS] (~15-40 B)
+        A->>B: CUT_PROPOSE [PROOF cells,k,witness] (~100-130 B)
+        B-->>A: CUT_CERT [PROOF + signed_by] (~110-130 B)
+        A->>B: ACK (digest echo) (~60-70 B)
+        Note over A,B: Cut path terminates (5 messages)
+    end
+```
+
+### seq_greedyprobe.mmd
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Robot A
+    participant B as Robot B
+    A->>B: PATH_PROPOSE [PROOF] (~70-120 B)
+    B-->>A: NACK [CONFLICTS] (~15-40 B)
+    A->>B: PROBE [k<=6 cells] (~20-40 B)
+    B-->>A: PROBE_REPLY [bits] (~15-30 B)
+    A->>B: PATH_PROPOSE' or CUT_PROPOSE [PROOF]
+    alt Valid
+        B-->>A: PATH_CERT / CUT_CERT [PROOF]
+        A->>B: ACK
+    else Not valid yet
+        A->>B: (repeat probe/guess loop)
+    end
+```
+
+### seq_respondermincut.mmd
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Robot A (initiator)
+    participant B as Robot B (responder-led)
+    Note over B: Compute min-cut on B map
+    B-->>A: CUT_PROPOSE / CUT_CERT [PROOF] (~80-120 B)
+    alt Insufficient
+        A->>B: NACK [CONFLICTS] (~30-90 B)
+        B-->>A: PROBE [k<=6] (~40-80 B)
+        A->>B: PROBE_REPLY [bits] (~20-40 B)
+        B-->>A: CUT_CERT (retry) [PROOF] (~80-130 B)
+        A->>B: ACK
+    else Accepted
+        A->>B: ACK
+    end
+    %% End diagram
+```
+
+### seq_sendall.mmd
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Robot A (sender)
+    participant B as Robot B (receiver)
+    Note over A: Stream blocked indices in chunks
+    A->>B: PROBE CHUNK #1 [RAW] (~180-200 B)
+    B-->>A: ACK (chunk id) (~60-70 B)
+    A->>B: PROBE CHUNK #2 [RAW] (~150-200 B)
+    B-->>A: ACK
+    A->>B: PROBE CHUNK #N [RAW] (final)
+    Note over B: Build union A+B and certify
+    B-->>A: PATH_CERT or CUT_CERT [PROOF] (~80-140 B)
+    A->>B: ACK (digest echo) (~16-30 B)
+    %% End diagram
+```
+
