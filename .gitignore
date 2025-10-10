@@ -1,4 +1,27 @@
+# Bytecode and caches
 __pycache__/
-*.pyc
-.venv/
+*.py[cod]
 .pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Build metadata
+*.egg-info/
+
+# OS junk
+.DS_Store
+
+# LaTeX build artefacts
+cert-talk-paper/*.aux
+cert-talk-paper/*.log
+cert-talk-paper/*.bbl
+cert-talk-paper/*.blg
+cert-talk-paper/*.fdb_latexmk
+cert-talk-paper/*.fls
+cert-talk-paper/*.synctex.gz
+
+# Non-canonical raster figures (we ship vector PDFs)
+cert-talk-paper/figs/*.png
+
