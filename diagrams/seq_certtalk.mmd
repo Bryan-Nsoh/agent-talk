@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    participant A as Robot A (initiator)
+    participant B as Robot B (responder)
+    Note over A: Start with private map A
+    A->>B: PATH_PROPOSE [PROOF] (~70-120 B)
+    Note over B: Validate against B hazards
+    alt Path valid
+        B-->>A: PATH_CERT [PROOF + signed_by] (~70-120 B)
+        A->>B: ACK (digest echo) (~16-30 B)
+        Note over A,B: Fast path terminates (3 messages)
+    else Path blocked
+        B-->>A: NACK [CONFLICTS] (~15-40 B)
+        A->>B: CUT_PROPOSE [PROOF cells,k,witness] (~100-130 B)
+        B-->>A: CUT_CERT [PROOF + signed_by] (~110-130 B)
+        A->>B: ACK (digest echo) (~60-70 B)
+        Note over A,B: Cut path terminates (5 messages)
+    end

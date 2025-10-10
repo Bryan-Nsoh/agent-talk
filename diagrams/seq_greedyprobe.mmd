@@ -1,0 +1,15 @@
+sequenceDiagram
+    autonumber
+    participant A as Robot A
+    participant B as Robot B
+    A->>B: PATH_PROPOSE [PROOF] (~70-120 B)
+    B-->>A: NACK [CONFLICTS] (~15-40 B)
+    A->>B: PROBE [k<=6 cells] (~20-40 B)
+    B-->>A: PROBE_REPLY [bits] (~15-30 B)
+    A->>B: PATH_PROPOSE' or CUT_PROPOSE [PROOF]
+    alt Valid
+        B-->>A: PATH_CERT / CUT_CERT [PROOF]
+        A->>B: ACK
+    else Not valid yet
+        A->>B: (repeat probe/guess loop)
+    end

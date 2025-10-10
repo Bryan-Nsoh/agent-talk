@@ -1,0 +1,14 @@
+sequenceDiagram
+    autonumber
+    participant A as Robot A (sender)
+    participant B as Robot B (receiver)
+    Note over A: Stream blocked indices in chunks
+    A->>B: PROBE CHUNK #1 [RAW] (~180-200 B)
+    B-->>A: ACK (chunk id) (~60-70 B)
+    A->>B: PROBE CHUNK #2 [RAW] (~150-200 B)
+    B-->>A: ACK
+    A->>B: PROBE CHUNK #N [RAW] (final)
+    Note over B: Build union A+B and certify
+    B-->>A: PATH_CERT or CUT_CERT [PROOF] (~80-140 B)
+    A->>B: ACK (digest echo) (~16-30 B)
+    %% End diagram

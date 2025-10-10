@@ -1,0 +1,14 @@
+LICENSE
+README.md
+pyproject.toml
+agent_talk/__init__.py
+agent_talk_beta.egg-info/PKG-INFO
+agent_talk_beta.egg-info/SOURCES.txt
+agent_talk_beta.egg-info/dependency_links.txt
+agent_talk_beta.egg-info/requires.txt
+agent_talk_beta.egg-info/top_level.txt
+tests/test_agents.py
+tests/test_codecs.py
+tests/test_messages.py
+tests/test_oracle.py
+tests/test_protocol.py

@@ -1,0 +1,16 @@
+sequenceDiagram
+    autonumber
+    participant A as Robot A (initiator)
+    participant B as Robot B (responder-led)
+    Note over B: Compute min-cut on B map
+    B-->>A: CUT_PROPOSE / CUT_CERT [PROOF] (~80-120 B)
+    alt Insufficient
+        A->>B: NACK [CONFLICTS] (~30-90 B)
+        B-->>A: PROBE [k<=6] (~40-80 B)
+        A->>B: PROBE_REPLY [bits] (~20-40 B)
+        B-->>A: CUT_CERT (retry) [PROOF] (~80-130 B)
+        A->>B: ACK
+    else Accepted
+        A->>B: ACK
+    end
+    %% End diagram

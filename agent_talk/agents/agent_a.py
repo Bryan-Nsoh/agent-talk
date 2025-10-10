@@ -40,10 +40,7 @@ class AgentA(FiniteStateAgent):
         self.probe_used = False
         self.total_nacks = 0
         self.yield_sent = False
-        self.follow_mode = False
         self.pending_reply: Optional[Tuple[str, dict]] = None
-        self.peer_path_digest: Optional[int] = None
-        self.peer_cut_digest: Optional[int] = None
 
     def step(self, incoming: Optional[Msg]) -> Msg:
         if incoming is not None:
@@ -152,12 +149,9 @@ class AgentA(FiniteStateAgent):
                     self.state = "PLAN_CUT"
         elif self.state == "AWAIT_YIELD_ACK":
             if message.type == "ACK" and message.payload.get("ack_of") == "YIELD":
-                self.follow_mode = True
-                self.state = "FOLLOW"
+                self.state = "PLAN_CUT"
             else:
                 self.state = "PLAN_CUT"
-        elif self.state == "FOLLOW":
-            self._handle_follow_message(message)
         elif self.state == "READY_DONE":
             pass
 
@@ -181,7 +175,7 @@ class AgentA(FiniteStateAgent):
             if self.state == "SEND_REPLY" and self.pending_reply is not None:
                 msg_type, payload = self.pending_reply
                 self.pending_reply = None
-                self.state = "FOLLOW"
+                self.state = "READY_DONE"
                 return self.make_message(msg_type, payload)
 
             if self.state == "PLAN_PATH":

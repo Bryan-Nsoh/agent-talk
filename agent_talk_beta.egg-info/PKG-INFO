@@ -1,0 +1,112 @@
+Metadata-Version: 2.4
+Name: agent-talk-beta
+Version: 0.1.0
+Summary: Beta: Proof-of-Path Agent Talk on private occupancy grids
+Author: Agent Talk Team
+License: MIT
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Provides-Extra: analysis
+Requires-Dist: numpy>=1.26; extra == "analysis"
+Requires-Dist: pandas>=2.2; extra == "analysis"
+Requires-Dist: matplotlib>=3.8; extra == "analysis"
+Requires-Dist: seaborn>=0.13; extra == "analysis"
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Dynamic: license-file
+
+# Beta: Proof-of-Path Agent Talk
+
+This repository contains a reference implementation of the **Beta: Proof-of-Path Agent Talk** experiment. Two deterministic finite-state agents exchange typed JSON messages to establish whether a start cell can reach a goal cell on the union of their private binary occupancy grids. Conversations terminate with machine-checkable certificates—either a path witness or a cut witness—that an oracle verifies exactly.
+
+## Getting Started
+
+The project targets Python 3.11 and has no mandatory third-party dependencies.
+
+```bash
+uv venv
+source .venv/bin/activate
+uv pip install -e .
+```
+
+Optional analysis utilities live under the `analysis` extra:
+
+```bash
+uv pip install -e ".[analysis]"
+```
+
+## Repository Layout
+
+```
+agent_talk/
+  core/        # codecs, CRC16, message schema, protocol utilities
+  env/         # grid models and instance generation
+  agents/      # deterministic FSM agents
+  oracle/      # union-map verifier and flow routines
+  runners/     # single-run and batch evaluation drivers
+  analysis/    # metric aggregation and plotting
+  io/          # cache and log interfaces
+configs/       # YAML configs for main and ablation runs
+scripts/       # convenience CLI wrappers
+tests/         # unit tests covering codecs, messages, oracle, protocol, agents
+agents.md      # experiment protocol (mirrors Agent Experiment Playbook)
+experiments/   # run log + transcript snapshots for audit
+runs/          # JSONL outputs and summary CSVs (latest: 20251009T2010)
+logs/          # timestamps of the batch commands (one per run)
+data/          # cached datasets (`20251008T151417Z_cache.jsonl`)
+scripts/       # CLI helpers (`run_eval.sh`, `run_ablations.sh`, `expand_includes.py`)
+final_runs_raw.txt # representative slices from the 20251009T2010 systems
+EXPERT_HANDOFF*.md # templated + expanded expert bundle (self-contained)
+HANDOFF_SPEC.md    # instructions for generating the expert handoff
+uv.lock / pyproject.toml # dependency and project metadata
+```
+
+## Latest Results (2025-10-09 SCHEMA-free rerun)
+
+- CertTalk: success 1.000, median 468.5 bytes / 5 rounds.
+- Send-All: success 1.000, median 364.0 bytes / 3 rounds.
+- Greedy-Probe: success 1.000, median 468.5 bytes / 5 rounds.
+- Responder-MinCut: success 0.205, median 506.0 bytes / 6 rounds.
+
+Full summaries live in `runs/20251009T201059Z_summary.csv` with transcripts under `experiments/transcripts/`.
+
+## Reproduce the 1k Run
+
+Generate the shared cache:
+
+```bash
+uv run python -m agent_talk.env.generator --out data/20251008T151417Z_cache.jsonl --n 1000 --size 10 --seed 123
+```
+
+Run CertTalk and baselines (SCHEMA-free protocol):
+
+```bash
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system certtalk --out runs/20251009T201009Z_certtalk.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system sendall --out runs/20251009T201024Z_sendall.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system greedyprobe --out runs/20251009T201034Z_greedyprobe.jsonl
+uv run python -m agent_talk.runners.batch_eval --cache data/20251008T151417Z_cache.jsonl --system respondermincut --out runs/20251009T201043Z_respondmincut.jsonl
+```
+
+Aggregate metrics:
+
+```bash
+uv run python -m agent_talk.analysis.metrics --inputs \
+  runs/20251009T201009Z_certtalk.jsonl \
+  runs/20251009T201024Z_sendall.jsonl \
+  runs/20251009T201034Z_greedyprobe.jsonl \
+  runs/20251009T201043Z_respondmincut.jsonl \
+  --out runs/20251009T201059Z_summary.csv
+```
+
+## Testing
+
+```bash
+uv run pytest
+```
+
+All tests execute in a few seconds on CPU-only hardware.
+
+## License
+
+MIT
