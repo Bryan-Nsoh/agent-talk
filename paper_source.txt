@@ -14,6 +14,7 @@
 \usepackage{natbib}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{listings}
+\usepackage[most]{tcolorbox}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,calc,fit}
 % tikzmark not available on some TeX installs; not needed here
@@ -51,7 +52,19 @@
   xrightmargin=1.2em
 }
 
-\newcommand{\intuition}[1]{\medskip\noindent\textbf{Intuition.} #1\medskip}
+% Intuition callouts styled as a subtle box
+\newtcolorbox{intuitionbox}{
+  colback=blue!5!white,
+  colframe=blue!50!black,
+  fonttitle=\bfseries,
+  title=Intuition,
+  sharp corners,
+  boxrule=0.5pt,
+  left=4pt,
+  right=4pt,
+  top=4pt,
+  bottom=4pt
+}
 % (inline callout macro not used in the final build; removed for portability)
 
 \title{Certificate Talk: Minimal, Proof-Carrying Communication for Two Agents With Private Maps}
@@ -75,38 +88,49 @@ We study two agents with private obstacle maps that must decide whether a safe p
 
 %% --- BEGIN sections/overview.tex ---
 \section*{What this paper proves in one page}
-\intuition{Two agents with private obstacle maps decide if a safe route exists from $s$ to $t$ under a small byte budget. Dialogues end with a verifiable path or cut certificate.}
+\begin{intuitionbox}
+Two agents with private obstacle maps decide if a safe route exists from $s$ to $t$ under a small byte budget. Dialogues end with a verifiable path or cut certificate.
+\end{intuitionbox}
 
-\textbf{End states.} Every successful conversation ends in one of two small artifacts:
+End states. Every successful conversation ends in one of two small artifacts:
 \begin{itemize}
   \item \textbf{PATH\_CERT} proves reachability. It carries a compressed run list (RLE4) and a checksum.
   \item \textbf{CUT\_CERT} proves unreachability. It carries a compressed set of obstacle cells (DELTA16) with one-bit witnesses per cell and a checksum.
 \end{itemize}
 
-\textbf{Fast path.} If the responder can fully validate a proposal, it returns the certificate immediately. The initiator acknowledges the certificate and the dialogue terminates (three messages total).
+Fast path. If the responder can fully validate a proposal, it returns the certificate immediately. The initiator acknowledges the certificate and the dialogue terminates (three messages total).
 
-\textbf{Why logs are readable.} All packets are typed JSON with a compact key map and CRCs. Humans can read them; an oracle replays the final artifact against the union map $U=A\cup B$ to check it.
+Why logs are readable. All packets are typed JSON with a compact key map and CRCs. Humans can read them; an oracle replays the final artifact against the union map $U=A\cup B$ to check it.
 
-\textbf{Where we go next.} We define the compact payloads and envelope, show the dialogue choreography, and then formalize the model, agents, and oracle before presenting results. Figures in the next two sections provide a concrete running example and the message flow.
-
+Where we go next. We define the compact payloads and envelope, show the dialogue choreography, and then formalize the model, agents, and oracle before presenting results. Figures in the next two sections provide a concrete running example and the message flow.
 
 %% --- END sections/overview.tex ---
 %% --- BEGIN sections/intro.tex ---
-\section{Why certificates instead of full maps?}
-\intuition{Two delivery robots share a radio channel that is barely wide enough for proof objects. CertTalk shows that small, typed exchanges can replace the old plan of streaming raw maps.}
+\section{Introduction}
 
-Imagine two couriers who must deliver a heavy meal together. Robot~A carries thermal sensors that flag hot hazards such as steam vents and transformer leaks, while Robot~B scans the ground for sinkholes and torn pavement. The city grid is only $10\times 10$ cells in our test bed, yet broadcasting full sensor imagery still costs several kilobytes and multiple seconds per attempt. More importantly, an engineer reading the resulting logs would still not know which obstacles caused the decision to abort or proceed.
+Robots often make decisions with only a partial view of the world while sharing a narrow communication channel. Consider two agents that hold different obstacle maps of the same environment. They must decide whether a path exists between a shared start and goal without streaming full maps to each other. The straightforward approach is to exchange everything and let a single agent decide. That approach is reliable but expensive in bytes and difficult to audit because the final decision is entangled with the details of fused sensor maps. We explore a different contract where agents trade short, typed messages that carry verifiable evidence about the decision itself. Each conversation ends in a compact artifact that an offline checker can replay on the union map to certify either reachability by a path or separation by a small cut. The goal is to match the reliability of full sharing with fewer bytes and with transcripts that are easy for humans to read.
 
-CertTalk offers a different contract. Each message has a rigid JSON skeleton. Proposals are literal artifacts: either a compressed path from the restaurant to the destination, or a compressed cut that severs the two locations. The responder either returns explicit conflicts or upgrades the proposal to a certificate that the initiator acknowledges. A short transcript suffices to convince a third-party oracle that the decision was correct. Because every field is typed and checksummed, the logs remain compact while revealing the entire reasoning chain.
+Our approach draws inspiration from proof-carrying computation. Proof-carrying code replaced trust in a sender with a program that arrives bundled with a machine-checkable proof of safety properties~\cite{Necula1997PCC}. The idea migrated from code to algorithms under the banner of certifying algorithms, where each output includes a witness that an independent checker validates in linear or near-linear time~\cite{McConnell2011Certifying}. We adopt the same philosophy for two-agent coordination: messages are not hints but proofs. A path message is a compressed sequence of steps and a checksum. A cut message is a small set of obstacle cells with per-cell attribution bits that say which agent attests each cell. Either artifact is sufficient for the peer to validate locally and for an oracle to verify globally on the union map.
 
-This document walks through the protocol in detail. We begin with a running example, introduce the vocabulary used by the encoders, describe the system model and message flow, and finally document the finite-state agents and the oracle checker. Later versions will reincorporate empirical results and related work once the method section is fully settled.
+The problem we study is a close cousin of multi-agent path finding, which typically assumes agents plan trajectories that avoid each other on a shared map~\cite{Sharon2012CBS,Ma2019Prioritized}. We diverge from that setting in two ways. First, our agents do not move simultaneously; they negotiate a single reachability decision. Second, the maps are private and heterogeneous, so the main difficulty is epistemic rather than geometric. This difference shifts the algorithmic focus from joint trajectory search to communication protocols that recover only the information needed to certify a yes or no answer. The verification load then becomes simple. Replaying a candidate path is a linear pass over grid steps, and checking a separator reduces to a standard min-cut disconnectivity check on the potential graph that splits vertices into in/out halves with unit capacities, which is textbook material~\cite{CLRS2009}.
+
+Communication-efficient coordination has deep roots in decentralized control, where agents weigh the value of sending information against the cost of bandwidth and delay~\cite{OliehoekAmato2016}. That line of work clarifies when communication pays off but rarely prescribes the structure of the messages themselves. In parallel, the learning community has studied differentiable inter-agent communication, where policies learn what to transmit through gradient signals~\cite{Sukhbaatar2016CommNet,Foerster2016DIAL,Lazaridou2017Emergent}. Learned protocols can be powerful but are often opaque and difficult to audit. Our contribution complements these directions by proposing a tiny, deterministic protocol in which every packet has human-readable semantics and every conversation culminates in an artifact that a checker can replay. The protocol borrows the accountability of certifying algorithms while preserving the simplicity and small-message footprint required by low-bandwidth links.
+
+Concretely, we present a two-agent dialogue that alternates complete proposals and verifications. When a path is proposed, the responder either upgrades it to a certificate or returns explicit conflicts. When a cut is proposed, the responder validates per-cell attributions and checks that removing the set disconnects start from goal in its own potential graph before certifying it. A minimal probe mechanism resolves ambiguities by asking about a handful of cells once per branch. The resulting transcripts are three to five messages in the common case and remain well under typical per-packet limits. The artifacts are small enough to read at a glance and precise enough for an offline oracle to replay on the union map. The combination yields a communication pattern that is efficient, verifiable, and interpretable.
+
+This work makes five concrete advances. We define a minimal, deterministic dialogue where every run ends in a path or cut certificate with per-cell attribution and CRC guards. We introduce compact, human-legible payloads for paths (RLE4) and cuts (DELTA16 with witness bits) that fit within tight per-packet budgets. We establish a responder fast-path rule that collapses common cases to three messages (proposal, certificate, acknowledgement) without sacrificing verifiability. We design a single-probe reconciliation mechanism that resolves ambiguous separators in one round while keeping transcripts concise. Finally, we provide a reproducible evaluation framework with side-by-side comparisons against Send-All and classical probe-style baselines on a fixed cache, where transcripts and metrics are auditable end-to-end.
+
+Imagine two couriers who must deliver a heavy meal together. Robot~A carries thermal sensors that flag hot hazards such as steam vents and transformer leaks, while Robot~B scans the ground for sinkholes and torn pavement. The city grid is only $10\times 10$ cells in our test bed, yet broadcasting full sensor imagery still costs several kilobytes and multiple seconds per attempt. More importantly, an engineer reading the resulting logs would still not know which obstacles caused the decision to abort or proceed. CertTalk offers a different contract. Each message has a rigid JSON skeleton. Proposals are literal artifacts: either a compressed path from the restaurant to the destination, or a compressed cut that severs the two locations. The responder either returns explicit conflicts or upgrades the proposal to a certificate that the initiator acknowledges. A short transcript suffices to convince a third-party oracle that the decision was correct. Because every field is typed and checksummed, the logs remain compact while revealing the entire reasoning chain.
 
 %% --- END sections/intro.tex ---
 %% --- BEGIN sections/artifacts_overview.tex ---
-\section{Certificates at a glance}
-\intuition{Before diving into the protocol, meet the two proof objects that a conversation produces: either a path certificate that proves reachability or a cut certificate that proves separation.}
+\section{Certificate Artifacts}
+\begin{intuitionbox}
+Before diving into the protocol, meet the two proof objects a conversation produces: either a path certificate that proves reachability or a cut certificate that proves separation.
+\end{intuitionbox}
 
-\subsection*{PATH\_CERT (annotated)}
+% PATH_CERT (annotated)
+A successful dialogue produces a final artifact that both humans and oracles can verify independently. The path certificate proves reachability by carrying a compressed run-length encoding of the route along with a checksum and the signer’s identity. The responder validates every step against its local hazard map and, if the path clears all obstacles, immediately returns this certificate.
 \begin{minipage}[t]{\linewidth}
 \begin{lstlisting}
 {"t":"PATH_CERT",
@@ -129,7 +153,8 @@ This document walks through the protocol in detail. We begin with a running exam
 \bottomrule
 \end{tabular}
 
-\subsection*{CUT\_CERT (annotated)}
+% CUT_CERT (annotated)
+When no path exists, the conversation produces a cut certificate instead. This artifact encodes a separator: a small set of obstacle cells whose removal would disconnect start from goal. The DELTA16 encoding stores one absolute coordinate followed by signed deltas, typically compressing 6--12 cells into a few dozen bytes. The witness field carries one bit per cell to attribute which robot attested each obstacle.
 \begin{minipage}[t]{\linewidth}
 \begin{lstlisting}
 {"t":"CUT_CERT",
@@ -160,8 +185,10 @@ A full transcript is simply the lead-up to one of these artifacts. The next sect
 
 %% --- END sections/artifacts_overview.tex ---
 %% --- BEGIN sections/physical_world.tex ---
-\section{The physical world}
-\intuition{Both agents live on the same $10\times 10$ Manhattan grid. Each sees a different slice of the obstacles and neither ever observes the union directly.}
+\section{The Physical World}
+\begin{intuitionbox}
+Both agents live on the same $10\times 10$ Manhattan grid. Each sees a different slice of the obstacles and neither ever observes the union directly.
+\end{intuitionbox}
 
 \subsection*{Coordinate frame}
 Cells are indexed by $(x,y)$ with $x$ increasing eastward and $y$ increasing southward. The restaurant $R$ is fixed at $(0,0)$ and the destination $F$ sits at $(9,9)$. Movements are 4-neighbour only.
@@ -208,33 +235,25 @@ Robot~A’s thermal camera marks hot hazards (H) along column three; Robot~B’s
 
 %% --- END sections/physical_world.tex ---
 %% --- BEGIN sections/building_blocks.tex ---
-\section{Building blocks}
+\section{Algorithmic Building Blocks}
 \label{sec:building-blocks}
-\intuition{Before the dialogue begins, the agents share a vocabulary of planners and encoders that keeps proofs short and verifiable.}
+\begin{intuitionbox}
+Before the dialogue begins, agents share a vocabulary of planners and encoders that keep proofs short and verifiable.
+\end{intuitionbox}
 
-\subsection*{Shortest paths via BFS}
-Robot~A searches its current belief grid with breadth-first search. BFS expands the grid layer by layer, guaranteeing the shortest path when one exists. On a $10\times 10$ grid the search touches at most 100 cells and completes well under a millisecond.
+Both robots rely on breadth-first search to find shortest paths through their current belief grids. BFS expands the graph layer by layer, guaranteeing optimality when a route exists. On a $10\times 10$ grid the search touches at most one hundred cells and completes in under a millisecond. When no path emerges, the initiator switches to computing a minimum vertex separator using Dinic’s algorithm on the potential graph, where each grid cell becomes a node pair connected by capacity $1$ if blocked or $\infty$ if free. This flow-based approach identifies the smallest set of obstacle cells whose removal would disconnect start from goal.
 
-\subsection*{Separators via potential-graph min-cut}
-When no path emerges, Robot~A switches to a vertex-cut computation on the potential graph: each grid cell becomes a pair of nodes linked by capacity 1 if blocked or $\infty$ if free. A Dinic flow separates $s$ and $t$ by selecting the minimum set of blocked cells that disconnects the graph.
+The resulting paths and cuts must fit within our 256-byte packet limit, which motivates two specialized encodings. Paths are compressed via run-length encoding (RLE4) where two bits capture direction—Up, Right, Down, Left—and six bits store run length, packing up to sixty-three consecutive steps into a single byte. A sequence like “Right×3, Down×4, Right×2, Down×1” fits into four bytes before Base64. Separators use DELTA16 encoding: one absolute $(x,y)$ coordinate followed by signed int8 deltas relative to the previous cell, with restart markers for large jumps. Typical separators of six to twelve cells compress to twelve to twenty bytes.
 
-\subsection*{Path compression (RLE4)}
-Instead of shipping raw coordinates, paths are encoded as direction runs. Two bits capture the heading (Up, Right, Down, Left) and six bits store the run length, packing up to 63 identical steps into a single byte. The sequence is then Base64 encoded for JSON transport.
-
-\subsection*{Cut compression (DELTA16)}
-Cut cells are stored as one absolute $(x,y)$ coordinate followed by signed int8 deltas relative to the previous cell. Large jumps trigger a restart marker that introduces another absolute coordinate. Typical separators of 6--12 cells use 12--20 bytes before Base64 encoding.
-
-\subsection*{Witness bits}
-Each separator cell carries one attribution bit: 0 means Robot~A detected the obstacle, 1 means Robot~B supplied it. Robot~B accepts the certificate if either it sees the obstacle locally or the witness bit credits Robot~A. The packed witness vector remains tiny (one bit per cell).
-
-\subsection*{Checksums}
-We use CRC16-CCITT in two places. The payload checksum (\texttt{digest16}) guards the raw run or cell bytes. The envelope checksum (\texttt{c}) runs over the canonical JSON string to catch transmission errors anywhere in the packet.
+The protocol’s key insight is the witness bit vector. Each separator cell carries one attribution bit: zero means Robot~A detected the obstacle, one means Robot~B supplied it. The responder accepts a certificate if, for every cell, either it sees the obstacle locally or the witness bit credits the peer. This single bit per cell prevents disputes about unseen obstacles while adding negligible overhead. Finally, every payload includes a CRC16-CCITT checksum: \texttt{digest16} guards the raw run or cell bytes, while the envelope checksum \texttt{c} covers the entire canonical JSON packet to catch transmission errors.
 
 %% --- END sections/building_blocks.tex ---
 %% --- BEGIN sections/running_example.tex ---
-\section{Running example at a glance}
+\section{Running Example at a Glance}
 \label{sec:running-example}
-\intuition{A single delivery attempt reveals the entire shape of the dialogue: a proposal, an optional correction, and a certificate that an oracle can replay.}
+\begin{intuitionbox}
+A single delivery attempt reveals the entire shape of the dialogue: a proposal, an optional correction, and a certificate that an oracle can replay.
+\end{intuitionbox}
 
 Figure~\ref{fig:maps} shows the partial views held by each robot during one of the benchmark seeds. Robot~A marks hot hazards along column three; Robot~B marks unstable pavement along column six. Neither robot knows that both hazard lines exist simultaneously.
 
@@ -363,8 +382,10 @@ Occasionally the responder cannot certify a cut immediately. In those cases it r
 
 %% --- END sections/running_example.tex ---
 %% --- BEGIN sections/dialogue_flow.tex ---
-\section{Dialogue flow}
-\intuition{A conversation is a short alternation: propose a complete artifact, let the responder either certify it or reply with precise conflicts, and terminate on the acknowledgement of the certificate.}
+\section{Dialogue Flow}
+\begin{intuitionbox}
+A conversation is a short alternation: propose a complete artifact, let the responder either certify it or reply with precise conflicts, and terminate on the acknowledgement of the certificate.
+\end{intuitionbox}
 
 \needspace{10\baselineskip}
 \begin{figure}[htbp]
@@ -388,13 +409,11 @@ Occasionally the responder cannot certify a cut immediately. In those cases it r
 \end{figure}
 \FloatBarrier
 
-\paragraph{Fast-path rule}
-If the responder can fully validate a proposal, it replies with \texttt{PATH\_CERT} or \texttt{CUT\_CERT}. The initiator immediately acknowledges the certificate and the transcript ends; no trailing \texttt{DONE} messages are required.
+Fast-path rule. If the responder can fully validate a proposal, it replies with \texttt{PATH\_CERT} or \texttt{CUT\_CERT}. The initiator immediately acknowledges the certificate and the transcript ends; no trailing \texttt{DONE} messages are required.
 
-\paragraph{Handling rejections}
-On a \texttt{NACK}, the initiator updates its beliefs with the returned conflicts. If the current branch has not yet used its one probe, the initiator may send a \texttt{PROBE} with up to six ambiguous cells and folds the \texttt{PROBE\_REPLY} bits into its beliefs before recomputing a path or cut.
+Handling rejections. On a \texttt{NACK}, the initiator updates its beliefs with the returned conflicts. If the current branch has not yet used its one probe, the initiator may send a \texttt{PROBE} with up to six ambiguous cells and folds the \texttt{PROBE\_REPLY} bits into its beliefs before recomputing a path or cut.
 
-\paragraph{Message key map}
+Message key map.
 \begin{table}[h]
 \centering
 \begin{tabular}{ll|ll}
@@ -416,8 +435,10 @@ Key & Meaning & Key & Meaning \\
 
 %% --- END sections/dialogue_flow.tex ---
 %% --- BEGIN sections/communication_patterns.tex ---
-\section{Communication patterns by system}
-\intuition{Each system moves different information at different times. Seeing the flows side by side makes the byte and round differences intuitive.}
+\section{Communication Patterns by System}
+\begin{intuitionbox}
+Each system moves different information at different times. Seeing the flows side by side makes the byte and round differences intuitive.
+\end{intuitionbox}
 
 % We include PNGs generated from Mermaid (scripts/build_diagrams.sh).
 % If images are not yet built, run the script or see ASCII in the repo under diagrams/.
@@ -524,14 +545,16 @@ sequenceDiagram
 
 %% --- END sections/communication_patterns.tex ---
 %% --- BEGIN sections/oracle.tex ---
-\section{Oracle verification}
-\intuition{The oracle is a referee that sees the union map. It replays path certificates to ensure every step is legal and replays cut certificates to ensure the barrier is genuine.}
+\section{Oracle Verification}
+\begin{intuitionbox}
+The oracle is a referee that sees the union map. It replays path certificates to ensure every step is legal and replays cut certificates to ensure the barrier is genuine.
+\end{intuitionbox}
 
 For a path certificate the oracle decodes \texttt{runs}, verifies that the sequence starts at $s$ and ends at $t$, checks that each move is a Manhattan step within bounds, and rejects if any traversed cell belongs to $U$. Optional bookkeeping compares the certified path length to the oracle shortest path to compute the path-gap metric.
 
 For a cut certificate the oracle decodes \texttt{cells}, confirms that the list length matches \texttt{k}, rebuilds witness bits, and rejects if any listed cell is outside the grid or free in $U$. It then removes the cut cells from the potential graph and checks that $s$ and $t$ fall in different components. Only then does the oracle accept the transcript. Because the oracle never interacts with the agents during the dialogue, archived certificates remain valid independently of the execution environment.
 
-\paragraph{Cut acceptance checklist.} The responder and the oracle both implement the following checks:
+Cut acceptance checklist. The responder and the oracle both implement the following checks:
 \begin{itemize}
   \item Decode `cells` and confirm $|\text{cells}| = k$; all cells within grid bounds.
   \item For each cell, either it is locally blocked or the `witness` credits the peer.
@@ -541,8 +564,10 @@ For a cut certificate the oracle decodes \texttt{cells}, confirms that the list 
 
 %% --- END sections/oracle.tex ---
 %% --- BEGIN sections/agents.tex ---
-\section{Agent behaviour}
-\intuition{Both robots are finite-state planners. They track what the peer has asserted, keep a short memory of failed artifacts, and decide between paths and cuts based on that history.}
+\section{Agent Behavior}
+\begin{intuitionbox}
+Both robots are finite-state planners that track peer assertions, keep a short memory of failed artifacts, and decide between paths and cuts based on conversation history.
+\end{intuitionbox}
 
 Robot~A begins each conversation with an empty belief map and a halo that discourages retrying recently blocked cells. After every message it integrates the peer's evidence. Belief updates are monotone: once a cell is believed blocked it stays blocked, and once it is believed free it stays free. Failed digests are stored so that identical proposals are never retried.
 
@@ -552,13 +577,15 @@ Robot~B has a symmetric planner. Upon receiving \texttt{PATH\_PROPOSE} it decode
 
 Both robots terminate once they have sent or acknowledged a certificate. The conversation history at that point consists of a handful of JSON objects that capture the entire argument. The next section explains how the oracle replays those objects to provide an independent verdict.
 
-\paragraph{One-probe rule and branch definition.} The initiator may issue at most one \texttt{PROBE} \emph{per branch}. A branch is the contiguous attempt sequence rooted at a unique pair $(\text{last\_nack\_type},\ \text{last\_artifact\_digest})$. Any new artifact digest restarts the branch and re-enables a single probe for that branch.
+One-probe rule and branch definition. The initiator may issue at most one \texttt{PROBE} per branch. A branch is the contiguous attempt sequence rooted at a unique pair $(\text{last\_nack\_type},\ \text{last\_artifact\_digest})$. Any new artifact digest restarts the branch and re-enables a single probe for that branch.
 
 %% --- END sections/agents.tex ---
 %% --- BEGIN sections/encodings.tex ---
-\section{Encodings and envelope}
+\section{Encodings and Envelope}
 \label{sec:encodings}
-\intuition{Keeping packets tiny means reusing one envelope schema and compact payload encodings for both artefacts and the bookkeeping messages that surround them.}
+\begin{intuitionbox}
+Keeping packets tiny means reusing one envelope schema and compact payload encodings for both artifacts and the bookkeeping messages that surround them.
+\end{intuitionbox}
 
 Every message has the canonical form
 \[
@@ -590,8 +617,10 @@ The type $\tau$ guards the control flow, \texttt{p} wraps either an artifact or 
 
 %% --- END sections/encodings.tex ---
 %% --- BEGIN sections/system_model.tex ---
-\section{Problem setting}
-\intuition{Two finite-state agents alternate messages. Each sees only part of the obstacle map. Their job is to settle the reachability question without exceeding the byte budget.}
+\section{Problem Setting}
+\begin{intuitionbox}
+Two finite-state agents alternate messages. Each sees only part of the obstacle map. Their job is to settle the reachability question without exceeding the byte budget.
+\end{intuitionbox}
 
 Cells are indexed by integer pairs $(x,y)$ with $x$ increasing eastward and $y$ increasing southward. Movement is four-neighbour only; diagonal steps never occur.
 
@@ -603,8 +632,10 @@ Both robots are deterministic. Their internal state consists of the private map,
 
 %% --- END sections/system_model.tex ---
 %% --- BEGIN sections/experimental_setup.tex ---
-\section{Experimental setup}
-\intuition{A fixed cache of 1{,}000 layouts lets us run every system side by side. All code is deterministic; every number in the paper traces back to one of the JSONL files.}
+\section{Experimental Setup}
+\begin{intuitionbox}
+A fixed cache of 1{,}000 layouts lets us run every system side by side. All code is deterministic; every number in the paper traces back to one of the JSONL files.
+\end{intuitionbox}
 
 \textbf{Dataset.} We reuse the publicly released cache \texttt{data/20251008T151417Z\_cache.jsonl}. Each entry records the private masks $A$ and $B$, the oracle reachable flag for $U$, the optimal path length when reachable, and the minimum cut size otherwise. Generating the cache is a single command and takes under a minute on a laptop. The cache seed is fixed so future runs remain comparable.
 
@@ -615,7 +646,9 @@ Both robots are deterministic. Their internal state consists of the private map,
 %% --- END sections/experimental_setup.tex ---
 %% --- BEGIN sections/results.tex ---
 \section{Results}
-\intuition{After removing the SCHEMA handshake and enabling the compact key map everywhere, CertTalk matches the deterministic baselines on success while closing most of the byte gap with Send-All.}
+\begin{intuitionbox}
+After removing the SCHEMA handshake and enabling the compact key map everywhere, CertTalk matches the deterministic baselines on success while closing most of the byte gap with Send-All.
+\end{intuitionbox}
 
 \begin{table}[h]
 \centering
@@ -704,24 +737,25 @@ def plot_byte_mix(dm: pd.DataFrame, outdir: Path, order: list[str]):
 
 %% --- END sections/results.tex ---
 %% --- BEGIN sections/ablations.tex ---
-\section{Ablations and evolution}
-\intuition{Each protocol tweak was validated on the same 1{,}000-instance cache, making it easy to attribute byte and round improvements to individual ideas.}
+\section{Ablations and Evolution}
+\begin{intuitionbox}
+Each protocol tweak was validated on the same 1{,}000-instance cache, making it easy to attribute byte and round improvements to individual ideas.
+\end{intuitionbox}
 
-\paragraph{Witness bits \& targeted probes}
-The 2025-10-08 run without witness bits stalled at a median of $3.1$~KB and $21$ rounds. Introducing witness bits and the single-probe rule dropped CertTalk and Greedy-Probe to $947$~bytes and $7$ rounds while preserving $>99.9\%$ success. Conflicting cells now resolve on the very next attempt rather than oscillating.
+Witness bits and targeted probes. The 2025-10-08 run without witness bits stalled at a median of $3.1$~KB and $21$ rounds. Introducing witness bits and the single-probe rule dropped CertTalk and Greedy-Probe to $947$~bytes and $7$ rounds while preserving $>99.9\%$ success. Conflicting cells now resolve on the very next attempt rather than oscillating.
 
-\paragraph{SCHEMA handshake removal}
-Eliminating the two-message SCHEMA preamble pushed the median down to $653.5$~bytes and kept rounds at $7$. No correctness regressions were observed; the same single probe still sufficed on the ambiguous cuts.
+SCHEMA handshake removal. Eliminating the two-message SCHEMA preamble pushed the median down to $653.5$~bytes and kept rounds at $7$. No correctness regressions were observed; the same single probe still sufficed on the ambiguous cuts.
 
-\paragraph{Compact schema everywhere}
-Applying the compact key map to all systems closed the final gap. CertTalk’s median bytes now sit at $468.5$ with a median of 5~rounds, Greedy-Probe mirrors the same numbers, and Send-All benefits as well (median $364$~bytes). The responder-led min-cut baseline remains unchanged because it does not rely on compact keys.
+Compact schema everywhere. Applying the compact key map to all systems closed the final gap. CertTalk’s median bytes now sit at $468.5$ with a median of five rounds, Greedy-Probe mirrors the same numbers, and Send-All benefits as well (median $364$~bytes). The responder-led min-cut baseline remains unchanged because it does not rely on compact keys.
 
 Future drafts will add a small bar chart summarising the byte reductions from each toggle. The text above already records the concrete medians for reproducibility.
 
 %% --- END sections/ablations.tex ---
 %% --- BEGIN sections/limitations.tex ---
 \section{Limitations}
-\intuition{The protocol deliberately targets a narrow, fully deterministic setting; several assumptions would need adjustment for broader deployments.}
+\begin{intuitionbox}
+The protocol deliberately targets a narrow, fully deterministic setting; several assumptions would need adjustment for broader deployments.
+\end{intuitionbox}
 
 \begin{itemize}
 \item \textbf{Reliable channel.} Messages never drop or reorder in our experiments. A lossy link would require replay buffers or per-message signatures.
@@ -733,7 +767,9 @@ Future drafts will add a small bar chart summarising the byte reductions from ea
 %% --- END sections/limitations.tex ---
 %% --- BEGIN sections/reproducibility.tex ---
 \section{Reproducibility}
-\intuition{All artifacts live in the repository; reproducing the study is a sequence of four commands once \texttt{uv} is installed.}
+\begin{intuitionbox}
+All artifacts live in the repository; reproducing the study is a sequence of four commands once \texttt{uv} is installed.
+\end{intuitionbox}
 
 \begin{enumerate}
 \item Create the environment and install the package:
@@ -773,16 +809,7 @@ The transcript gallery in \autoref{app:gallery} references the exact seeds used 
 
 %% --- END sections/reproducibility.tex ---
 %% --- BEGIN sections/related_work.tex ---
-\section{Related work}
-\begin{intuition}
-Our protocol sits at the intersection of distributed verification, multi-agent pathfinding, and interpretable communication. We borrow the idea of proof-carrying artifacts from certifying algorithms and adapt it to a bandwidth-constrained, two-agent dialog.
-\end{intuition}
-
-\paragraph{Certifying algorithms.} Classical certifying algorithms output a solution accompanied by a proof object that can be checked in linear time. Typical examples include spanning tree certification, max-flow/min-cut verifiers, and witness objects for NP-complete problems. CertTalk adopts the same philosophy: the final packet is sufficient to convince an independent oracle of reachability or separation.
-
-\paragraph{Multi-agent pathfinding.} Distributed approaches to multi-agent pathfinding generally fall into two categories: global planners that share full maps or policies, and local planners that communicate heuristics or priorities. Our contribution shows that a third point in the design space exists: agents can trade minimally sufficient proofs instead of raw maps or unstructured hints, achieving comparable reliability with drastically smaller payloads.
-
-\paragraph{Emergent communication.} Learned protocols often produce opaque signals that are difficult to audit. In contrast, CertTalk intentionally limits itself to typed JSON messages with human-readable semantics. This constraint is motivated by safety review: the logs can be inspected line by line to understand exactly why a decision was made.
+% Related work has been integrated into the Introduction section
 
 %% --- END sections/related_work.tex ---
 %% --- BEGIN sections/conclusion.tex ---
