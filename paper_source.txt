@@ -384,93 +384,25 @@ These are four ways to buy certainty: prepay everything (Send‑All), pay only p
   \centering
   \begin{subfigure}{.49\linewidth}
     \centering
-    \begin{verbatim}
-%% Mermaid source rendered by scripts/build_diagrams.sh (mermaid-cli)
-sequenceDiagram
-    autonumber
-    participant A as Robot A (initiator)
-    participant B as Robot B (responder)
-    Note over A: Start with private map A
-    A->>B: PATH_PROPOSE [PROOF] (~70-120 B)
-    Note over B: Validate against B hazards
-    alt Path valid
-        B-->>A: PATH_CERT [PROOF + signed_by] (~70-120 B)
-        A->>B: ACK (digest echo) (~16-30 B)
-        Note over A,B: Fast path terminates (3 messages)
-    else Path blocked
-        B-->>A: NACK [CONFLICTS] (~15-40 B)
-        A->>B: CUT_PROPOSE [PROOF cells,k,witness] (~100-130 B)
-        B-->>A: CUT_CERT [PROOF + signed_by] (~110-130 B)
-        A->>B: ACK (digest echo) (~60-70 B)
-    end
-\end{verbatim}
+    \includegraphics[width=\linewidth]{figs/seq_certtalk.pdf}
     \caption{CertTalk: complete proposals, fast certificates, witness bits.}
   \end{subfigure}
   \hfill
   \begin{subfigure}{.49\linewidth}
     \centering
-    \begin{verbatim}
-%% Mermaid source rendered by scripts/build_diagrams.sh (mermaid-cli)
-sequenceDiagram
-    autonumber
-    participant A as Robot A (sender)
-    participant B as Robot B (receiver)
-    Note over A: Stream blocked indices in chunks
-    A->>B: PROBE CHUNK #1 [RAW] (~180-200 B)
-    B-->>A: ACK (chunk id) (~60-70 B)
-    A->>B: PROBE CHUNK #2 [RAW] (~150-200 B)
-    B-->>A: ACK
-    A->>B: PROBE CHUNK #N [RAW] (final)
-    Note over B: Build union A+B and certify
-    B-->>A: PATH_CERT or CUT_CERT [PROOF] (~80-140 B)
-    A->>B: ACK (digest echo) (~16-30 B)
-\end{verbatim}
+    \includegraphics[width=\linewidth]{figs/seq_sendall.pdf}
     \caption{Send-All: one-way raw streaming; union built at the responder.}
   \end{subfigure}
   \medskip
   \begin{subfigure}{.49\linewidth}
     \centering
-    \begin{verbatim}
-%% Mermaid source rendered by scripts/build_diagrams.sh (mermaid-cli)
-sequenceDiagram
-    autonumber
-    participant A as Robot A
-    participant B as Robot B
-    A->>B: PATH_PROPOSE [PROOF] (~70-120 B)
-    B-->>A: NACK [CONFLICTS] (~15-40 B)
-    A->>B: PROBE [k<=6 cells] (~20-40 B)
-    B-->>A: PROBE_REPLY [bits] (~15-30 B)
-    A->>B: PATH_PROPOSE' or CUT_PROPOSE [PROOF]
-    alt Valid
-        B-->>A: PATH_CERT / CUT_CERT [PROOF]
-        A->>B: ACK
-    else Not valid yet
-        A->>B: (repeat probe/guess loop)
-    end
-\end{verbatim}
+    \includegraphics[width=\linewidth]{figs/seq_greedyprobe.pdf}
     \caption{Greedy-Probe: probes plus speculative proposals.}
   \end{subfigure}
   \hfill
   \begin{subfigure}{.49\linewidth}
     \centering
-    \begin{verbatim}
-%% Mermaid source rendered by scripts/build_diagrams.sh (mermaid-cli)
-sequenceDiagram
-    autonumber
-    participant A as Robot A (initiator)
-    participant B as Robot B (responder-led)
-    Note over B: Compute min-cut on B map
-    B-->>A: CUT_PROPOSE / CUT_CERT [PROOF] (~80-120 B)
-    alt Insufficient
-        A->>B: NACK [CONFLICTS] (~30-90 B)
-        B-->>A: PROBE [k<=6] (~40-80 B)
-        A->>B: PROBE_REPLY [bits] (~20-40 B)
-        B-->>A: CUT_CERT (retry) [PROOF] (~80-130 B)
-        A->>B: ACK
-    else Accepted
-        A->>B: ACK
-    end
-\end{verbatim}
+    \includegraphics[width=\linewidth]{figs/seq_respondermincut.pdf}
     \caption{Responder-MinCut: responder-led cut; one probe to reconcile.}
   \end{subfigure}
   \caption{Information flow across systems. Tags: [RAW] raw indices, [PROOF] path/cut artifact, [CONFLICTS] explicit blocking cells, [PROBE] targeted query.}
@@ -590,6 +522,64 @@ Most negotiations end quickly: "I propose this." "I accept." Done. Or: "I propos
 \caption{Summary across 1{,}000 cached instances (SCHEMA-free run on 2025-10-09). Values are medians with bootstrap 95\% confidence intervals.}
 \label{tab:medians}
 \input{sections/results_table.tex}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{minipage}[t]{0.48\linewidth}
+    \textbf{Send-All (seed 123)}\\[-0.5em]
+    \begin{lstlisting}[language=json,basicstyle=\ttfamily\footnotesize]
+{"t":"PROBE","s":"v1","q":0,
+ "p":{"wht":"CELLS","indices":[2,4,8,12,14,16,20,21,23,46,
+      55,60,62,78,79,86,87,89,91,93],
+      "chunk":0,"total":1,"final":true},
+ "c":46212}
+{"t":"CUT_CERT","s":"v1","q":0,
+ "p":{"cs":"AgAAAAAB/gEBAA==",
+      "digest16":44276,"k":4,"sb":["B"],"w":"Ag=="},
+ "c":1950}
+{"t":"ACK","s":"v1","q":1,
+ "p":{"ack_of":"CUT_CERT","digest16":44276},
+ "c":57933}
+    \end{lstlisting}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.48\linewidth}
+    \textbf{CertTalk (same seed)}\\[-0.5em]
+    \begin{lstlisting}[language=json,basicstyle=\ttfamily\footnotesize]
+{"t":"CUT_PROPOSE","s":"v1","q":0,
+ "p":{"cs":"AAACAAEAAf4AAQ==",
+      "digest16":46585,"k":4,"w":"AA=="},
+ "c":10141}
+{"t":"CUT_CERT","s":"v1","q":0,
+ "p":{"cs":"AAACAAEAAf4AAQ==",
+      "digest16":46585,"k":4,"sb":["B"],"w":"AA=="},
+ "c":4584}
+{"t":"ACK","s":"v1","q":1,
+ "p":{"ack_of":"CUT_CERT","digest16":46585},
+ "c":36481}
+    \end{lstlisting}
+  \end{minipage}
+  \caption{Transcripts for an unreachable instance. Send-All streams raw blocked indices before the responder certifies; CertTalk trades a complete proposal for a cut certificate directly. The CertTalk transcript is already the proof.}
+  \label{fig:transcripts-sendall-certtalk}
+\end{figure}
+
+\subsection*{Why CertTalk Instead of Send-All?}
+Send-All always succeeds by streaming every blocked cell, yet its transcript is a raw ingredient list. Auditing a run means rebuilding the union grid, running the solver, and inferring which obstacles mattered. CertTalk spends roughly one hundred more bytes, but those bytes \emph{are} the argument: a minimal witness that anyone can replay in seconds, with per-cell attribution bits that show who vouched for each obstacle.
+
+\begin{table}[h]
+\centering
+\caption{Audit effort required after reading a transcript.}
+\label{tab:audit-effort}
+\begin{tabular}{p{0.32\linewidth}p{0.28\linewidth}p{0.28\linewidth}}
+\toprule
+Step & Send-All & CertTalk \\
+\midrule
+Decode transcript & JSON list of raw indices & JSON path/cut artifact \\
+Rebuild union grid & Required & Not needed \\
+Run solver to verify & Required to confirm decision & Optional (certificate replays directly) \\
+Explain to a peer & Requires highlighting which indices mattered & Certificate states the path or cut explicitly \\
+\bottomrule
+\end{tabular}
 \end{table}
 
 CertTalk now attains the same 100\% success rate as Send-All and Greedy-Probe with a median transcript size of $468.5$~bytes. The three-turn fast path fires on 23.5\% of instances, and 99.5\% of runs finish within seven messages. Responder-MinCut remains intentionally conservative: it only succeeds on unreachable instances, providing a deterministic cut-only baseline for qualitative comparison.
@@ -749,7 +739,7 @@ The transcript gallery in \autoref{app:gallery} references the exact seeds used 
 A handful of typed messages can replace full map exchange if the messages themselves carry proofs. CertTalk demonstrates the idea in a controlled setting, yielding transcripts that humans and machines can audit alike.
 \end{intuitionbox}
 
-We presented CertTalk, a certificate-carrying protocol for two agents with private occupancy grids. Witness bits and fast certificate replies collapse dialogue length, while compact encodings keep every packet well under $256$ bytes. On a reproducible 1{,}000-instance benchmark CertTalk matches the reliability of the Send-All baseline and stays within $105$ bytes of its median payload, all while producing logs that are literal, interpretable JSON objects. We hope this work encourages the broader community to treat communication products as proofs and to demand the same auditability from robotic dialogues as we do from certifying algorithms.
+We presented CertTalk, a certificate-carrying protocol for two agents with private occupancy grids. Witness bits and fast certificate replies collapse dialogue length, while compact encodings keep every packet well under $256$ bytes. On a reproducible 1{,}000-instance benchmark CertTalk matches the reliability of the Send-All baseline, spending about one hundred extra bytes so the transcript itself becomes the path-or-cut witness. Send-All streams raw indices that must be recomposed into the union map; CertTalk hands over the finished argument. We hope this work encourages the broader community to treat communication products as proofs and to demand the same auditability from robotic dialogues as we do from certifying algorithms.
 
 %% --- END sections/conclusion.tex ---
 \appendix
