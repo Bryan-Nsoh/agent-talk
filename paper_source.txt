@@ -370,6 +370,8 @@ You can settle “can I get there?” four ways. (1) Hand me your entire map and
 % We include PNGs generated from Mermaid (scripts/build_diagrams.sh).
 % If images are not yet built, run the script or see ASCII in the repo under diagrams/.
 
+Figure~\ref{fig:patterns} sketches the message flow for each strategy.
+
 \needspace{20\baselineskip}
 \begin{figure}[htbp]
   \centering
@@ -627,7 +629,7 @@ def plot_byte_mix(dm: pd.DataFrame, outdir: Path, order: list[str]):
     tot = by_type.groupby(\"system\", observed=True)[\"bytes\"].transform(\"sum\")
     by_type[\"pct\"] = 100 * by_type[\"bytes\"] / tot
     top_types = by_type.groupby(\"type\")[\"bytes\"].sum().nlargest(6).index
-    by_type[\"type2\"] = by_type[\"type\"].where(by_type[\"type\"].isin(top_types), \"OTHER\")
+    by_type[\"type2\"] = by_type[\"type\"].where(by_type[\"type\"].isin(top-types), \"OTHER\")
     wide = (
         by_type.groupby([\"system\", \"type2\"], observed=True)[\"pct\"]).sum()
         .reset_index().pivot(index=\"system\", columns=\"type2\", values=\"pct\").fillna(0)
