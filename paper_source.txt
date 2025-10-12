@@ -87,31 +87,22 @@ We study two agents with private obstacle maps that must decide whether a safe p
 \keywords{certificate protocols \and multi-agent systems \and verifiable communication}
 
 %% --- BEGIN sections/overview.tex ---
-\section*{What this paper proves in one page}
-\begin{intuitionbox}
-Do not send the whole map; send a small, checkable witness. Like showing a validated boarding pass instead of your entire travel history, a certificate — either a path or a cut — is the least you must show to convince a skeptic. All design choices push toward proofs rather than maps because proofs are tiny, auditable, and settle the question quickly.
-\end{intuitionbox}
+\section*{Overview}
 
-Every successful conversation ends in one of two small artifacts:
-\begin{itemize}
-  \item \textbf{PATH\_CERT} proves reachability. It carries a compressed run list (RLE4) and a checksum.
-  \item \textbf{CUT\_CERT} proves unreachability. It carries a compressed set of obstacle cells (DELTA16) with one-bit witnesses per cell and a checksum.
-\end{itemize}
+Two robots must agree on reachability while seeing different slices of the map. The obvious contract is “tell me everything you know,” which costs kilobytes. CertTalk replaces that with “show me your argument.” A path certificate is the route itself encoded in a dozen bytes. A cut certificate is the barrier itself encoded in fewer than twenty bytes. Either proof fits in a single packet and can be replayed later without reconstructing the raw sensor data.
 
-If the responder can fully validate a proposal, it returns the certificate immediately, the initiator acknowledges it, and the dialogue terminates in three messages.
-
-Because packets are typed JSON with a compact key map and CRCs, the transcripts are both human-readable and easy for an oracle to replay on the union map $U=A\cup B$.
-
-We next define the compact payloads and envelope, show the dialogue choreography, and then formalize the model, agents, and oracle before presenting results. Figures in the next two sections provide a concrete running example and the message flow.
+The rest of the paper explains how we make those proofs reliable and small: what the certificates look like, how the asymmetry in sensing drives the protocol, why simple planners and witness bits are enough, and how the dialogue stays short while remaining auditable.
 
 %% --- END sections/overview.tex ---
 %% --- BEGIN sections/intro.tex ---
 \section{Introduction}
 \begin{intuitionbox}
-If you want to prove you cannot reach the airport, you do not photograph every street in the city. You show that Highway 101 is flooded and it is the only bridge across the river. Certificates are minimal proofs: instead of revealing everything you know, reveal only what is necessary to settle the question.
+To prove you cannot reach the airport you do not photograph every street in the city. You point to the one bridge that is flooded. Certificates follow that instinct: reveal only what settles the question, not everything you know.
 \end{intuitionbox}
 
-Robots often make decisions with only a partial view of the world while sharing a narrow communication channel. Consider two agents that hold different obstacle maps of the same environment. They must decide whether a path exists between a shared start and goal without streaming full maps to each other. The straightforward approach is to exchange everything and let a single agent decide. That approach is reliable but expensive in bytes and difficult to audit because the final decision is entangled with the details of fused sensor maps. We explore a different contract where agents trade short, typed messages that carry verifiable evidence about the decision itself. Each conversation ends in a compact artifact that an offline checker can replay on the union map to certify either reachability by a path or separation by a small cut. The goal is to match the reliability of full sharing with fewer bytes and with transcripts that are easy for humans to read.
+Two robots with private obstacle maps must decide whether a path exists between start and goal. Each robot sees different hazards: thermal sensors flag steam vents, ground radar detects sinkholes. The obvious approach is to stream both maps, fuse them, and let one robot decide. That works, but it is expensive in bytes and difficult to audit because the decision is buried in raw sensor data.
+
+We explore a different contract. Instead of streaming maps, robots exchange certificates. A path certificate proves reachability by carrying a compressed route that fits in roughly a dozen bytes. A cut certificate proves unreachability by listing the barrier cells, usually under twenty bytes. Either artifact is small enough for a single packet yet complete enough for an offline checker to replay on the merged map. The goal is to match the reliability of full sharing with a fraction of the bytes and transcripts that humans can read at a glance.
 
 Our approach draws inspiration from proof-carrying computation. Proof-carrying code replaced trust in a sender with a program that arrives bundled with a machine-checkable proof of safety properties~\cite{Necula1997PCC}. The idea migrated from code to algorithms under the banner of certifying algorithms, where each output includes a witness that an independent checker validates in linear or near-linear time~\cite{McConnell2011Certifying}. We adopt the same philosophy for two-agent coordination: messages are not hints but proofs. A path message is a compressed sequence of steps and a checksum. A cut message is a small set of obstacle cells with per-cell attribution bits that say which agent attests each cell. Either artifact is sufficient for the peer to validate locally and for an oracle to verify globally on the union map.
 
@@ -129,7 +120,7 @@ Imagine two couriers who must deliver a heavy meal together. Robot~A carries the
 %% --- BEGIN sections/artifacts_overview.tex ---
 \section{Certificate Artifacts}
 \begin{intuitionbox}
-A path is a positive witness — here is how. A cut is a negative witness — here is why not. We use these because both are easy to replay and hard to argue away: either a path really stays on free cells, or a cut really severs the grid.
+If you claim a door is locked you do not photograph the entire building, you show the lock. A path certificate is the route written down: “right three, down four.” A cut certificate is the wall written down: “cells (2,3), (2,4), (3,3) block the corridor.” Both are easy for your partner to check now and for an auditor to replay later. The whole protocol is about producing these tiny, unforgeable witnesses.
 \end{intuitionbox}
 
 % PATH_CERT (annotated)
@@ -217,7 +208,7 @@ Both robots rely on breadth-first search to find shortest paths through their cu
 The resulting paths and cuts must fit within our 256-byte packet limit, which motivates two specialized encodings. Paths are compressed via run-length encoding (RLE4) where two bits capture direction (Up, Right, Down, Left) and six bits store run length, packing up to sixty-three consecutive steps into a single byte. A sequence like “Right×3, Down×4, Right×2, Down×1” fits into four bytes before Base64. Separators use DELTA16 encoding: one absolute $(x,y)$ coordinate followed by signed int8 deltas relative to the previous cell, with restart markers for large jumps. Typical separators of six to twelve cells compress to twelve to twenty bytes.
 
 \begin{intuitionbox}
-When two people argue about whether a door is locked, one says "I personally checked" and the other says "okay, I will trust you on that one." Witness bits encode that testimony. Each cut cell carries who vouches for it, so the responder can accept cells it has not seen while still rejecting unjustified ones. Attribution breaks deadlock without streaming full maps.
+When two people argue about whether a door is locked, one says "I personally checked" and the other says "okay, I will trust you on that one." Witness bits encode that testimony. Each cut cell carries who vouches for it, so the responder can accept cells it has not seen while still rejecting unjustified ones. One bit per cell breaks the deadlock without streaming full maps.
 \end{intuitionbox}
 
 The protocol’s key insight is the witness bit vector. Each separator cell carries one attribution bit: zero means Robot~A detected the obstacle, one means Robot~B supplied it. The responder accepts a certificate if, for every cell, either it sees the obstacle locally or the witness bit credits the peer. This single bit per cell prevents disputes about unseen obstacles while adding negligible overhead. Finally, every payload includes a CRC16-CCITT checksum: \texttt{digest16} guards the raw run or cell bytes, while the envelope checksum \texttt{c} covers the entire canonical JSON packet to catch transmission errors.
@@ -373,7 +364,7 @@ Payload  & \texttt{wht} & Probe selector (e.g., \texttt{"CELLS"}) \\
 %% --- BEGIN sections/communication_patterns.tex ---
 \section{Communication Patterns by System}
 \begin{intuitionbox}
-These are four ways to buy certainty: prepay everything (Send‑All), pay only proof at the end (CertTalk), pay for a few questions first (Greedy‑Probe), or let the responder assert a barrier (Responder‑MinCut). The byte and round profiles follow directly from which bill you choose to pay.
+Send-All pays upfront by streaming everything. CertTalk pays at the end by sending the proof. Greedy-Probe pays in questions. Responder-MinCut lets the responder make the big purchase. Four payment plans for certainty. The bytes and rounds follow the bill each system picks up.
 \end{intuitionbox}
 
 % We include PNGs generated from Mermaid (scripts/build_diagrams.sh).
