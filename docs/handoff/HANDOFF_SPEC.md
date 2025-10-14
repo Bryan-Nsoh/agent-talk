@@ -156,9 +156,9 @@ if __name__ == '__main__':
 ```
 
 ## How To Use
-1) Author `EXPERT_HANDOFF.template.md` with include tags
-2) Run: `uv run python scripts/expand_includes.py --in EXPERT_HANDOFF.template.md --out EXPERT_HANDOFF.md`
-3) Share only `EXPERT_HANDOFF.md` (path‑free, self‑contained)
+1) Author `docs/handoff/EXPERT_HANDOFF.template.md` with include tags
+2) Run: `uv run python scripts/expand_includes.py --in docs/handoff/EXPERT_HANDOFF.template.md --out docs/handoff/EXPERT_HANDOFF.md`
+3) Share only `docs/handoff/EXPERT_HANDOFF.md` (path‑free, self‑contained)
 
 ## Reviewer Prompts (General)
 - Bytes/rounds: Remove redundant turns/fields to hit targets while preserving interpretability?

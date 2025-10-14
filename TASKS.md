@@ -7,11 +7,11 @@
 
 ## Task 2: Encode Heuristics into Writing Workflow
 - Translate the collected heuristics into actionable rules for the writing agent (section structure, float discipline, narrative checkpoints, typography).
-- Update the writing-mode portion of `agents.md` with the new rules and checklists.
+- Update the writing-mode portion of `docs/AGENTS.md` with the new rules and checklists.
 
 ## Task 3: Validate the Updated Workflow
 - Apply the updated instructions to a short writing pass (e.g., revise one section) to confirm they are practical.
-- Note any gaps or friction and adjust `agents.md` accordingly.
+- Note any gaps or friction and adjust `docs/AGENTS.md` accordingly.
 
 ---
 - [ ] Task 1 complete

@@ -1,6 +1,6 @@
 # Experiment Log
 
-All experiments follow the Agent Experiment Protocol in `agents.md`. Logs live in `logs/` and run artifacts in `runs/` with ISO 8601 UTC timestamps.
+All experiments follow the Agent Experiment Protocol in `docs/AGENTS.md`. Logs live in `logs/` and run artifacts in `runs/` with ISO 8601 UTC timestamps.
 
 ---
 
