@@ -1,0 +1,212 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Readable section spacing and paragraph layout
+\titlespacing*{\section}{0pt}{10pt plus 3pt minus 2pt}{6pt}
+\titlespacing*{\subsection}{0pt}{8pt plus 3pt minus 2pt}{4pt}
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{0pt}
+\linespread{1.03}
+
+% Listings setup (more legible)
+\lstset{
+  basicstyle=\ttfamily\small,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=8pt,
+  frame=single,
+  rulecolor=\color{black},
+  breaklines=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  backgroundcolor=\color{black!1},
+  xleftmargin=1.0em,
+  xrightmargin=0.4em,
+  aboveskip=8pt, belowskip=8pt
+}
+
+\title{CertTalk: A Clear, Proof-First Protocol for Two Agents With Private Maps}
+\author{Agent Talk Team}
+\date{October 27, 2025}
+
+\begin{document}
+\maketitle
+
+\textbf{Abstract}\\
+Two agents each see only part of a grid’s obstacles. They must decide if a route exists from start $s$ to goal $t$ in the union map $U$—and hand over a proof anyone can replay later. CertTalk does not ship maps; it ships a certificate. If a path exists, the certificate is the path. If no path exists, the certificate is a small set of blocked cells that separates $s$ from $t$. This writeup presents the idea in plain language, shows two worked examples, and prints full, annotated transcripts for the baselines so a reader can verify what each system actually sends.
+
+\section{What We Decide (and What We Don’t)}
+\textbf{Problem.} A knows obstacles $A$. B knows obstacles $B$. Neither sees the union $U = A\cup B$. The question is: does a 4-neighbour path exist from $s$ to $t$ in $U$?
+
+\textbf{Contract.} The dialogue ends with a single certificate that a third-party checker (the “oracle”) can replay using only the certificate, $s$, $t$, grid size, and $U$. The oracle never reads the negotiation transcript and never needs the agents’ planner code.
+
+\textbf{Out of scope.} No motion control, dynamics, or multi-agent coordination beyond the yes/no reachability proof. Certificates are short (target $\le$ 256 bytes) and archivable.
+
+\section{How the Proof Works}
+\textbf{Path certificate (checker’s steps).}
+\begin{enumerate}
+  \item Decode Base64 runs (RLE4 bytes).\label{step:path-decode}
+  \item Verify \texttt{digest16} (CRC16 of raw bytes).\label{step:path-crc}
+  \item Expand runs into coordinates from $s$ to $t$; check 4-connectivity and bounds.\label{step:path-expand}
+  \item Confirm no coordinate lies in a blocked cell of $U$.\label{step:path-free}
+  \item Accept. The bytes \emph{are} the proof.
+\end{enumerate}
+
+\textbf{Cut certificate (checker’s steps).}
+\begin{enumerate}
+  \item Decode Base64 cell list (DELTA16) and witness bits.\label{step:cut-decode}
+  \item Verify \texttt{digest16} (CRC16 of raw bytes).\label{step:cut-crc}
+  \item Check each listed cell is blocked in $U$.\label{step:cut-cells}
+  \item Remove the cells from the underlying 4-neighbour graph; verify $s$ and $t$ are disconnected.\label{step:cut-disc}
+  \item Accept. The bytes \emph{are} the proof.
+\end{enumerate}
+
+\vspace{6pt}
+\textit{Witness bits.} One bit per cut cell says “who saw this cell” (0=A, 1=B). They guide the responder during negotiation. The oracle ignores witness semantics except to check length.
+
+\section{Worked Example: Reachable (seed 247)}
+When a path exists, A proposes a concrete route. B replays it locally. If every step is free for B, B upgrades it to a certificate. Three messages end the dialogue.
+
+\textbf{CertTalk — PATH success}
+\begin{lstlisting}
+{
+  "t": "PATH_PROPOSE",
+  "s": "v1", "q": 0,
+  "p": { "runs": "QoVBgkKCRA==", "digest16": 22270 },
+  "c": 16269
+}
+{
+  "t": "PATH_CERT",
+  "s": "v1", "q": 0,
+  "p": { "runs": "QoVBgkKCRA==", "digest16": 22270, "signed_by": ["B"] },
+  "c": 49459
+}
+{
+  "t": "ACK",
+  "s": "v1", "q": 1,
+  "p": { "ack_of": "PATH_CERT", "digest16": 22270 },
+  "c": 3754
+}
+\end{lstlisting}
+\textit{What B checks.} Decode runs; verify CRC; expand steps; confirm every coordinate is free in B’s map; certify. The certificate itself is the replayable proof.
+
+\section{Worked Example: Unreachable (seed 145)}
+When no path exists, A proposes a short list of blocked cells that separates $s$ from $t$. B validates per-cell (using witness attribution to allow “I saw it” from A) and then validates disconnection. Three messages suffice on this seed.
+
+\textbf{CertTalk — CUT success}
+\begin{lstlisting}
+{
+  "t": "CUT_PROPOSE",
+  "s": "v1", "q": 0,
+  "p": { "cs": "AAACAAH/Af8=", "k": 3, "digest16": 11880, "w": "AA==" },
+  "c": 51694
+}
+{
+  "t": "CUT_CERT",
+  "s": "v1", "q": 0,
+  "p": { "cs": "AAACAAH/Af8=", "k": 3, "digest16": 11880, "w": "AA==", "sb": ["B"] },
+  "c": 43260
+}
+{
+  "t": "ACK",
+  "s": "v1", "q": 1,
+  "p": { "ack_of": "CUT_CERT", "digest16": 11880 },
+  "c": 27687
+}
+\end{lstlisting}
+\textit{What B checks.} Decode cells and witness; verify CRC; accept each cell (blocked locally or credited to A); remove the set and confirm $s$ and $t$ are disconnected; certify.
+
+\section{Baselines: What They Send (and Why It Matters)}
+Different systems reach the same decision with different bytes. Below we show one clean unreachable seed (145) where all four succeed, and why a reader should care.
+
+\textbf{Send-All — CUT success (seed 145)}
+\begin{lstlisting}
+{
+  "type": "PROBE", "schema": "v1", "seq": 0,
+  "payload": { "what": "CELLS",
+    "indices": [2,3,4,11,13,14,17,19,20,22,27,32,36,37,38,39,46,47,63,65,68,70,71,78,80,83,85,95,98],
+    "chunk": 0, "total": 1, "final": true },
+  "crc16": 40037
+}
+{
+  "type": "CUT_CERT", "schema": "v1", "seq": 0,
+  "payload": { "cells": "AgAAAP4BAQA=", "encoding": "DELTA16_v1",
+    "digest16": 34702, "k": 3, "witness": "Ag==", "signed_by": ["B"] },
+  "crc16": 12256
+}
+{
+  "type": "ACK", "schema": "v1", "seq": 1,
+  "payload": { "ack_of": "CUT_CERT", "digest16": 34702 },
+  "crc16": 57117
+}
+\end{lstlisting}
+\textit{Why it matters.} Send-All may stream raw blocked indices first. The later certificate—not the raw indices—is the replayable proof.
+
+\textbf{Greedy-Probe — CUT success (seed 145)}\quad Same as CertTalk above on this clean seed (three messages: CUT\_PROPOSE, CUT\_CERT, ACK). Probes appear only when needed.
+
+\textbf{Responder-MinCut — CUT success (seed 145)}
+\begin{lstlisting}
+{
+  "t": "SCHEMA", "s": "v1", "q": 0,
+  "p": { "cut_enc": "DELTA16_v1", "path_enc": "RLE4_v1", "s": [0,0], "size": [10,10], "t": [9,9] },
+  "c": 64959
+}
+{
+  "t": "CUT_CERT", "s": "v1", "q": 0,
+  "p": { "cs": "BwAHAAEAAQD9Af8B", "k": 5, "digest16": 4126, "w": "Hw==", "sb": ["B"] },
+  "c": 32263
+}
+{
+  "t": "NACK", "s": "v1", "q": 1,
+  "p": { "n": "CUT_PROPOSE", "reason": "BLOCKED", "x": [[7,7],[9,7],[6,8]] },
+  "c": 593
+}
+{
+  "t": "PROBE", "s": "v1", "q": 1,
+  "p": { "cs": [[7,7],[9,7],[6,8]], "wht": "CELLS" },
+  "c": 55063
+}
+{
+  "t": "HELLO", "s": "v1", "q": 2, "p": {}, "c": 26486
+}
+{
+  "t": "DONE", "s": "v1", "q": 2, "p": {}, "c": 22322
+}
+\end{lstlisting}
+\textit{Why it matters.} Shows the longer path to agreement when the first cut is insufficient; one small probe reconciles the disagreement.
+
+\section{Results in One Table}
+Medians across 1{,}000 cached instances (schema-free run).
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+System & Bytes & Rounds \\
+\midrule
+Send-All & 364 & 3 \\
+CertTalk & 468 & 5 \\
+Greedy-Probe & 468 & 5 \\
+Responder-MinCut & 506 & 6 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\noindent Takeaway: CertTalk spends about one extra hundred bytes versus Send-All, but those bytes \emph{are the proof} (path or cut), which simplifies auditing.
+
+\section{Limits and What to Expect}
+\begin{itemize}
+  \item Two agents; $10\times 10$ grids; reliable in-order channel. Larger grids may require chunked certificates.
+  \item No privacy model: witness bits reveal who attested each cut cell. Signatures are optional if authenticity is required.
+  \item The checker never reads the transcript; it only replays the final artifact with $U$.
+\end{itemize}
+
+\end{document}

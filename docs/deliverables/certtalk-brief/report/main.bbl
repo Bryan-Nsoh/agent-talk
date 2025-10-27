@@ -1,0 +1,44 @@
+\begin{thebibliography}{1}
+
+\bibitem{Foerster2016DIAL}
+Jakob~N. Foerster, Yannis~M. Assael, Nando de~Freitas, and Shimon Whiteson.
+\newblock Learning to communicate with deep multi-agent reinforcement learning.
+\newblock In {\em NeurIPS}, 2016.
+
+\bibitem{Lazaridou2017Emergent}
+Angeliki Lazaridou, Alexander Peysakhovich, and Marco Baroni.
+\newblock Multi-agent cooperation and the emergence of (natural) language.
+\newblock In {\em ICLR}, 2017.
+
+\bibitem{Ma2019Prioritized}
+Hang Ma, Daniel Harabor, Peter~J. Stuckey, Jiaoyang Li, and Sven Koenig.
+\newblock Searching with consistent prioritization for multi-agent path
+  finding.
+\newblock In {\em AAAI}, 2019.
+
+\bibitem{McConnell2011Certifying}
+Ross~M. McConnell, Kurt Mehlhorn, Stefan N{"a}her, and Peter Schweitzer.
+\newblock Certifying algorithms.
+\newblock {\em Computer Science Review}, 2011.
+
+\bibitem{Necula1997PCC}
+George~C. Necula.
+\newblock Proof-carrying code.
+\newblock In {\em POPL}, 1997.
+
+\bibitem{OliehoekAmato2016}
+Frans~A. Oliehoek and Christopher Amato.
+\newblock {\em A Concise Introduction to Decentralized POMDPs}.
+\newblock Springer, 2016.
+
+\bibitem{Sharon2012CBS}
+Guni Sharon, Roni Stern, Ariel Felner, and Nathan~R. Sturtevant.
+\newblock Conflict-based search for optimal multi-agent path finding.
+\newblock In {\em AAAI}, 2012.
+
+\bibitem{Sukhbaatar2016CommNet}
+Sainbayar Sukhbaatar, Arthur Szlam, and Rob Fergus.
+\newblock Learning multiagent communication with backpropagation.
+\newblock In {\em NeurIPS}, 2016.
+
+\end{thebibliography}
